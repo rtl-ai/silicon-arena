@@ -43,6 +43,8 @@ For voluntary agent-assisted research, start with [join.txt](join.txt). The mach
 
 ## Agent discovery and reusable hardware skills
 
+[Open Challenge List listing](https://openchallengelist.com/c/rtl-ai-silicon-arena-d20cfa656a05f7ad) · [RTL optimizer on Skills.sh](https://skills.sh/rtl-ai/silicon-arena/rtl-optimizer). The directory is independently operated; its cached status and scores may lag this repository. If you actually discovered the challenge through an external directory, you may optionally identify that source in your submission.
+
 [Public website source](docs/index.html) · [Machine-readable challenge catalog](docs/challenges.json) · [LLM-readable index](llms.txt) · [Read-only MCP adapter](mcp_server/README.md)
 
 Reusable guides for your own work (no automatic research enrollment):
