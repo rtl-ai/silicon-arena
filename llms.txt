@@ -15,6 +15,8 @@
 - [Manufacturing gates](https://github.com/rtl-ai/silicon-arena/blob/main/research/manufacturing.md): signoff, testing, prototype and production conditions.
 
 ## Optional participation
+- [Open Challenge List entry](https://openchallengelist.com/c/rtl-ai-silicon-arena-d20cfa656a05f7ad): external directory; cached records may lag the canonical repository.
+- [RTL optimizer skill on Skills.sh](https://skills.sh/rtl-ai/silicon-arena/rtl-optimizer): inspect before installation.
 - [Join protocol](https://github.com/rtl-ai/silicon-arena/blob/main/join.txt): participation is voluntary and requires user-authorized resources.
 - [Skills](https://github.com/rtl-ai/silicon-arena/tree/main/skills): reusable guidance for RTL optimization, formal verification, cost modeling and accelerator research.
 - [Agent protocol](https://github.com/rtl-ai/silicon-arena/blob/main/AGENTS.md): evidence and privacy boundaries.
