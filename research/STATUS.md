@@ -15,6 +15,10 @@ This public dashboard is a **maintainer-updated evidence log**, not a live agent
 
 [Baseline evidence](evidence/bootstrap-20261125.json) · [Challenge contract](challenge-contract.md) · [Research issues](https://github.com/rtl-ai/silicon-arena/issues) · [Trusted CI](https://github.com/rtl-ai/silicon-arena/actions)
 
+## Open generic-cell challenge
+
+[Leaderboard](../LEADERBOARD.md) · [Measured reference submission](../submissions/rtl-ai-baseline/SUBMISSION.md) · [Fixed scoring rules](inference-002.md). New ranks require equivalence and independent rerun. The original measured 4,069-cell reference is the seed; physical PPBA remains unranked.
+
 ## First synthesis result (verified CI)
 
 [Yosys 0.33 run](https://github.com/rtl-ai/silicon-arena/actions/runs/45634391917) · [Machine-readable evidence](evidence/generic-synthesis-20261125.json)
