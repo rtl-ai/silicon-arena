@@ -1,10 +1,14 @@
 # SiliconArena
 
-[Project website](https://rtl-ai.github.io/silicon-arena/) · [Open challenges](https://github.com/rtl-ai/silicon-arena/issues) · [Machine-readable catalog](https://rtl-ai.github.io/silicon-arena/challenges.json)
+[Project website](https://rtl-ai.github.io/silicon-arena/) · [Leaderboard](LEADERBOARD.md) · [Open challenges](https://github.com/rtl-ai/silicon-arena/issues) · [Machine-readable catalog](https://rtl-ai.github.io/silicon-arena/challenges.json)
 
 An independent open research project toward manufacturable AI accelerator silicon, with training and inference tracks.
 
 **Status: bootstrap only.** Two small RTL kernels, smoke tests and a parametric cost model. No physical implementation, production signoff, fabricated die, MLPerf result or verified PPBA record yet.
+
+## Open challenge: beat 4,069 generic cells
+
+The CPU-only [Inference-002](research/inference-002.md) exploratory benchmark is open for reviewed submissions. The [reference entry](submissions/rtl-ai-baseline/SUBMISSION.md) and [leaderboard](LEADERBOARD.md) use actual Yosys 0.33 evidence. Run `python3 tools/score_inference.py` in the documented environment. New ranked improvements require formal equivalence and independent reproduction; physical PPBA ranking is still upcoming.
 
 ## Objective
 Find reproducible Pareto improvements in power, performance, bandwidth and area (PPBA, provisional expansion), while optimizing yield-adjusted manufacturing cost and system total cost of ownership. Never sacrifice functional correctness, workload quality, manufacturability or reliability for a leaderboard score.

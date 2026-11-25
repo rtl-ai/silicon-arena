@@ -1,0 +1,32 @@
+name: Public challenge qualification
+on:
+  push:
+    branches: [main, research/open-challenge-qualification-20261126]
+    paths:
+      - 'PROBLEM.md'
+      - 'submissions/**'
+      - 'tools/score_inference.py'
+      - 'tools/check_challenge_standard.py'
+      - '.github/workflows/challenge-qualification.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install matched public tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y yosys=0.33-5build2 iverilog=12.0-2build2 python3-yaml
+          dpkg-query -W yosys iverilog
+      - run: /usr/bin/python3 tools/check_challenge_standard.py
+      - name: Reproduce fixed reference and reviewed negative control
+        run: |
+          /usr/bin/python3 tools/score_inference.py --trusted-candidate candidates/inference/balanced_tree.sv > qualification.json
+          cat qualification.json
+          /usr/bin/python3 -c 'import json; x=json.load(open("qualification.json")); assert x["baseline"]["generic_cell_count"] == 4069; assert x["candidate"]["generic_cell_count"] == 4366'
