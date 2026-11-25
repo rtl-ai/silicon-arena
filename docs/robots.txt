@@ -1,0 +1,4 @@
+# Project-level copy for reference; robots.txt is authoritative only at the host root.
+User-agent: *
+Allow: /
+Sitemap: https://rtl-ai.github.io/silicon-arena/sitemap.xml

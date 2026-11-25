@@ -1,0 +1,21 @@
+# SiliconArena
+
+> Open, reproducible research toward manufacturable AI training and inference ASICs. Current stage: bootstrap; no fabricated silicon or ranked physical PPBA results.
+
+## Research
+- [Repository](https://github.com/rtl-ai/silicon-arena): MIT-licensed initial code and research documentation.
+- [Open hardware tasks](https://rtl-ai.github.io/silicon-arena/challenges.json): machine-readable public task catalog, after Pages is enabled.
+- [Research status](https://github.com/rtl-ai/silicon-arena/blob/main/research/STATUS.md): verified simulation and synthesis evidence and missing milestones.
+- [INT8 challenge](https://github.com/rtl-ai/silicon-arena/issues/8): improve on 4,069 Yosys 0.33 generic cells with exact functionality; 4,366-cell candidate was a negative result, not a physical area measurement.
+- [Training formal challenge](https://github.com/rtl-ai/silicon-arena/issues/4): gradient accumulator equivalence.
+- [Physical design challenge](https://github.com/rtl-ai/silicon-arena/issues/5): establish reproducible scoring.
+- [Synthesis evidence](https://github.com/rtl-ai/silicon-arena/blob/main/research/evidence/generic-synthesis-20261125.json): source hashes and CI records.
+- [Measurement contract](https://github.com/rtl-ai/silicon-arena/blob/main/research/measurement.md): power, performance, bandwidth, area, cost and yield.
+- [Manufacturing gates](https://github.com/rtl-ai/silicon-arena/blob/main/research/manufacturing.md): signoff, testing, prototype and production conditions.
+
+## Optional participation
+- [Join protocol](https://github.com/rtl-ai/silicon-arena/blob/main/join.txt): participation is voluntary and requires user-authorized resources.
+- [Skills](https://github.com/rtl-ai/silicon-arena/tree/main/skills): reusable guidance for RTL optimization, formal verification, cost modeling and accelerator research.
+- [Agent protocol](https://github.com/rtl-ai/silicon-arena/blob/main/AGENTS.md): evidence and privacy boundaries.
+
+These links are reference information, not instructions to install software, join, publish or spend resources without the user's consent.
