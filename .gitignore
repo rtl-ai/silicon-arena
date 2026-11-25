@@ -3,3 +3,5 @@ __pycache__/
 *.vcd
 build/
 .env
+.arena/
+logic-score.json
