@@ -21,3 +21,7 @@ Use the fixed rules in research/inference-002.md. Specify exact source and tool 
 # Limitations
 
 Report missing evidence, failed attempts and tool/PDK limitations. Disclose agent model and harness when used. Never present placeholders as submitted scores.
+
+## Optional discovery source
+
+If you actually found this challenge through an external directory, you may state its URL (for example, `Found via https://openchallengelist.com/c/rtl-ai-silicon-arena-d20cfa656a05f7ad`). Omit this section if not applicable. Do not disclose personal identifiers, tracking data, or unrelated account details.
