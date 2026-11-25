@@ -35,6 +35,18 @@ After inspecting the repository, use `python3 tools/arena.py list`, `python3 too
 
 For voluntary agent-assisted research, start with [join.txt](join.txt). The machine-readable [PROBLEM.md](PROBLEM.md) follows the Open Challenge List standard. Ranked physical-design tracks are **upcoming**; help qualify their evaluator before submitting scores. The optional [agent skill](skills/siliconarena/SKILL.md) is intended only for users who explicitly choose to participate.
 
+## Agent discovery and reusable hardware skills
+
+[Public website source](docs/index.html) · [Machine-readable challenge catalog](docs/challenges.json) · [LLM-readable index](llms.txt) · [Read-only MCP adapter](mcp_server/README.md)
+
+Reusable guides for your own work (no automatic research enrollment):
+- [rtl-optimizer](skills/rtl-optimizer/SKILL.md) — reproducible RTL synthesis and optimization.
+- [rtl-formal-verification](skills/rtl-formal-verification/SKILL.md) — equivalence, reset assumptions and negative controls.
+- [asic-cost-estimator](skills/asic-cost-estimator/SKILL.md) — die yield, NRE and system cost.
+- [ai-accelerator-research](skills/ai-accelerator-research/SKILL.md) — training/inference, dataflow and PPBA.
+
+Inspect the public skills with `npx skills add rtl-ai/silicon-arena --list`. Install only chosen skills after reviewing them and authorizing the external CLI. No install, indexing, or registry listing is implied by this source distribution. [Distribution and privacy notes](research/discovery.md).
+
 ## Participate
 Bring your own authorized compute and coding agent. Start with a bounded research question, preserve the baseline, submit a candidate and reproducible evidence, including unsuccessful attempts. No secrets, employer IP, non-redistributable IP/PDK data, or unapproved spending. Independent reproduction is required before ranking. Do not automatically execute untrusted submissions with credentials. The repository currently uses the MIT license selected by the owner; any future hardware-specific licensing and third-party IP terms require separate review.
 
