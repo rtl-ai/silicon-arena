@@ -1,58 +1,60 @@
 ---
 spec: problem.md/v1
 name: SiliconArena
-tagline: "Reproducible, manufacturable AI training and inference ASIC research"
-status: upcoming
+tagline: "Beat 4,069 generic logic cells in an exact INT8 dot product; a first step toward manufacturable AI accelerators."
+status: active
 domain: hardware-efficiency
-tags: [rtl, asic, ai-accelerator, training, inference, verification, ppba]
+tags: [rtl, asic, ai-accelerator, training, inference, formal-verification, synthesis]
 compute: cpu
-compute_details: "Initial RTL smoke tests run on a CPU. Formal and physical-design ranking environments are not yet qualified."
+compute_details: "CPU-only exploratory benchmark using Yosys and Icarus Verilog. Physical-design tracks remain upcoming."
 deadline: rolling
 prizes: recognition only
 organizer:
   name: RTLAI
   url: https://github.com/rtl-ai/silicon-arena
 tracks:
-  - id: training-001
-    name: Training compute primitive
-    metric: post-route standard-cell area at fixed timing and correctness
-    unit: um2
+  - id: inference-002
+    name: Exact INT8 dot product (generic synthesis)
+    metric: Yosys 0.33 generic logic cell count
+    unit: cells
     direction: minimize
-    description: "Planned exact signed gradient accumulation kernel; fixed PDK, constraints, tool versions and workload will be published before ranking."
-  - id: inference-001
-    name: Inference compute primitive
-    metric: post-route standard-cell area at fixed timing and correctness
-    unit: um2
-    direction: minimize
-    description: "Planned exact eight-lane INT8 dot product; fixed PDK, constraints, tool versions and workload will be published before ranking."
+    baseline: 4069
+    description: "Eight independent signed INT8 products, exact combinational signed 32-bit sum. Fixed synthesis script and reference. This is not post-route PPBA."
 submit:
   how: pull-request
   path: submissions/<handle>/
-  format: "Candidate RTL, reproduction commands, evidence and SUBMISSION.md; pre-ranking infrastructure contributions use normal PRs."
-  requirements: [Python 3, Icarus Verilog]
-  verification: "Maintainer independently checks equivalence and reruns a fixed scorer once qualified. No ranked scores accepted yet."
-  eligibility: "Open to human and agent-assisted contributors using authorized resources."
+  format: "One unique folder per entry with candidate RTL, proof and reproducible synthesis evidence, and SUBMISSION.md."
+  requirements: [Python 3, Yosys 0.33, Icarus Verilog]
+  verification: "Organizer reference is measured in trusted CI. New ranked entries require exact functional equivalence, manual review, and an independent fixed-flow rerun; provisional PRs are welcome. No untrusted candidate execution on credential-bearing runners."
+  eligibility: "Human and agent-assisted contributors using authorized resources."
   cost: free
   agents: welcome
-  attribution: "Disclose model and harness when used; preserve authorship."
+  attribution: "Disclose model and harness if known; preserve actual authorship."
 quickstart: |
   git clone https://github.com/rtl-ai/silicon-arena
   cd silicon-arena
-  python3 tools/smoke.py
-  python3 -m unittest discover -s tests -v
+  python3 tools/score_inference.py
 ---
 
-# SiliconArena research challenges
+# SiliconArena: open AI accelerator research
 
-The project welcomes reproducible verification and benchmark-infrastructure contributions today. Ranked physical-design challenges are **upcoming**, not yet open for scored submissions. There are no verified PPBA records or fabricated chips. A small arithmetic kernel is not an end-to-end accelerator.
+## Active challenge — Inference-002
 
-## Before ranking
+Reduce the generic logic cell count of the exact signed eight-lane INT8 dot product. The reference has **4,069 cells** in the documented Yosys 0.33 flow. The first balanced-tree experiment measured 4,366 cells and is retained as an unranked negative result.
 
-- Establish formal equivalence, pinned open toolchain and redistributable PDK, fixed clock and PVT, and independent scoring.
-- Measure power, performance, bandwidth and area separately; include precision, quality, workload and boundary. Preserve yield-adjusted cost and TCO assumptions.
-- Publish a reproducible baseline and a trusted scoring procedure. Do not publish unverified numeric scores or fake baselines.
-- No employer IP, credentials, restricted PDK data, unauthorized compute or paid resources.
+- [Leaderboard](LEADERBOARD.md) and [measured reference submission](submissions/rtl-ai-baseline/SUBMISSION.md).
+- [Fixed rules, environment and scoring](research/inference-002.md).
+- [Independent deterministic simulation contract](research/challenge-contract.md).
+- [Coordinate and submit](https://github.com/rtl-ai/silicon-arena/issues/8).
 
-## How to contribute now
+New accepted rankings require proof of equivalence and independent reproduction. The organizer reference is a measured seed, not an external contribution. The generic metric is an exploratory proxy; it is not a measure of physical area, timing, power, bandwidth, manufacturing cost or production readiness.
 
-Follow [join.txt](join.txt), [AGENTS.md](AGENTS.md), [measurement contract](research/measurement.md) and [issue #1](https://github.com/rtl-ai/silicon-arena/issues/1). Start with a bounded contribution and obtain maintainer review. See [submission template](templates/SUBMISSION.md.template) for the planned ranked format.
+## Upcoming training and inference physical-design tracks
+
+- Training-001: [gradient accumulator formal equivalence](https://github.com/rtl-ai/silicon-arena/issues/4).
+- Inference-001: [physical-design scorer qualification](https://github.com/rtl-ai/silicon-arena/issues/5).
+- Both tracks ultimately seek reproducible PPBA and yield-adjusted cost improvements; physical ranking requires a fixed redistributable PDK, toolchain, constraints and workload, signoff and independent validation. No fabricated silicon or verified physical PPBA records yet.
+
+## Submission and safety
+
+Use the [submission template](templates/SUBMISSION.md.template), [participation protocol](join.txt) and [agent rules](AGENTS.md). Work only within authorized compute and credentials. Record actual measured values and failures; do not submit employer IP, restricted PDK data, private information or fabricated results. No automatic enrollment or outreach.
