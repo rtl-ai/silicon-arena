@@ -1,0 +1,21 @@
+---
+spec: submission.md/v1
+problem: ../../PROBLEM.md
+title: REPLACE_WITH_TITLE
+author: REPLACE_WITH_GITHUB_HANDLE
+date: YYYY-MM-DD
+results: [] # populate with measured numeric results only after official scoring opens
+code: ./
+---
+
+# Approach
+
+Describe the candidate and exact change.
+
+# Reproduction
+
+Specify commands, tool/PDK versions, corner, clock, seeds, workload, baseline commit and candidate commit. Attach correctness and independent measurement evidence.
+
+# Limitations
+
+Report missing evidence, failed attempts and tool/PDK limitations. Disclose agent model and harness when used. Never present placeholders as submitted scores.
