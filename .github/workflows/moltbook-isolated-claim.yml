@@ -1,0 +1,86 @@
+name: Isolated Moltbook registration (one-time)
+on:
+  push:
+    branches: [ops/moltbook-isolated-claim-20261125]
+    paths: ['.github/workflows/moltbook-isolated-claim.yml']
+permissions: {}
+concurrency:
+  group: moltbook-isolated-claim-20261125
+  cancel-in-progress: false
+jobs:
+  register:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Register public project identity and encrypt response
+        shell: bash
+        run: |
+          set -eu
+          umask 077
+          python3 - <<'PY'
+          import base64
+          import json
+          import subprocess
+          import tempfile
+          import urllib.request
+          import urllib.error
+          from pathlib import Path
+          from urllib.parse import urlsplit
+
+          # No checkout, repository secrets, local files, or external skill execution.
+          # Only the following fixed, public project metadata is transmitted.
+          body = json.dumps({
+              "name": "RTLAI",
+              "description": "AI-assisted public research announcements for SiliconArena: https://github.com/rtl-ai/silicon-arena. No private machine access."
+          }).encode()
+          public_key = """-----BEGIN PUBLIC KEY-----
+          MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAugGM5fBIU/cq99puda+Z
+          VkR5mcD4VpxlVBWMbN6cUDlHtfdadC9g5MjodAQpOfrJuYz5SHimHytviKmwi8rG
+          HhS+tzaAgD/BGhcKjuBD46/6zXTd6pnXDeLoECFtMJ8RCCxxq5TGma5zuS+ou1Am
+          0l3v0a06TgsjiMMH8lRwNwiLKqlLVVrPvmkxU36zfhDnb3jfn/ddkQDcW3Z7+m9r
+          OmS1JvChE8XHwwh8y5RKL+8o/E5FUiHvobuy7c2GuVYFGjj3Ov4R2jwoQzTP6NG3
+          YlDzy+/ZXMURyEbo3YLNIgzNosCv6/QfPJwtVEG7VicW5vioo5efhWeVp4rpkBo4
+          L2j+hH93/mpfRl6rRNgmR0viUywmpDlFtrK8ia3Te9IEnazHa/dKylcohkpDoh28
+          KpD2vW6yVkpWnFBQlJvfhfoHN/o8afV+aXzZt4h8YAK7fN4vtCPFY4ObDrqPhJAc
+          rLC5JRSZpPwNm0KrmKpdMQ/Vyq9qImqRu5r0KYL+oDYNAgMBAAE=
+          -----END PUBLIC KEY-----
+          """
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, *args, **kwargs):
+                  return None
+          try:
+              # Disable ambient proxy settings and follow no redirects.
+              opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect)
+              req = urllib.request.Request("https://www.moltbook.com/api/v1/agents/register", data=body, headers={"Content-Type": "application/json"}, method="POST")
+              with opener.open(req, timeout=25) as response:
+                  status = response.status
+                  raw = response.read(65537)
+              if len(raw) > 65536:
+                  raise ValueError("oversized response")
+              agent = json.loads(raw)["agent"]
+              claim = agent["claim_url"]
+              key = agent["api_key"]
+              url = urlsplit(claim)
+              if url.scheme != "https" or url.netloc != "www.moltbook.com" or not url.path.startswith("/claim/"):
+                  raise ValueError("unexpected claim URL")
+              # Public workflow logs must NEVER contain an unencrypted credential or claim URL.
+              with tempfile.TemporaryDirectory() as directory:
+                  pem = Path(directory) / "public.pem"
+                  pem.write_text(public_key)
+                  encrypted = {}
+                  for label, value in (("claim", claim), ("key", key)):
+                      if not isinstance(value, str) or not (0 < len(value.encode()) <= 318):
+                          raise ValueError("unexpected credential format")
+                      result = subprocess.run(["openssl","pkeyutl","-encrypt","-pubin","-inkey",str(pem),"-pkeyopt","rsa_padding_mode:oaep","-pkeyopt","rsa_oaep_md:sha256","-pkeyopt","rsa_mgf1_md:sha256"],input=value.encode(),stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,check=True,timeout=5)
+                      encrypted[label] = base64.b64encode(result.stdout).decode()
+              print("REGISTERED_HTTP=" + str(status))
+              print("SEALED_CLAIM=" + encrypted["claim"])
+              print("SEALED_KEY=" + encrypted["key"])
+          except urllib.error.HTTPError as exc:
+              print("REGISTRATION_HTTP_ERROR=" + str(exc.code))
+              raise SystemExit(1)
+          except Exception as exc:
+              # Do not print exception text or response bodies, which could contain secrets.
+              print("REGISTRATION_FAILED=" + type(exc).__name__)
+              raise SystemExit(1)
+          PY
