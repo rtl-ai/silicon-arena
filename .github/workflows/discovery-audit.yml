@@ -1,0 +1,56 @@
+name: Public directory discovery audit (one-time)
+on:
+  push:
+    branches: [ops/discovery-audit-20261126]
+    paths: ['.github/workflows/discovery-audit.yml']
+permissions: {}
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - name: Check public listing, site and skill directory
+        run: |
+          python3 - <<'PY'
+          import json, urllib.request, urllib.error
+          ident="rtl-ai-silicon-arena-d20cfa656a05f7ad"
+          ownerrepo="rtl-ai/silicon-arena"
+          endpoints={
+              "project_home":"https://rtl-ai.github.io/silicon-arena/",
+              "ocl_board":"https://openchallengelist.com/c/"+ident,
+              "ocl_record":"https://openchallengelist.com/api/competitions/"+ident+".json",
+              "ocl_index":"https://openchallengelist.com/api/index.json",
+              "skills_repo":"https://skills.sh/rtl-ai/silicon-arena",
+              "skills_rtl":"https://skills.sh/rtl-ai/silicon-arena/rtl-optimizer",
+          }
+          for label,url in endpoints.items():
+              try:
+                  req=urllib.request.Request(url,headers={"User-Agent":"SiliconArena-Public-Discovery-Audit/1.0"})
+                  with urllib.request.urlopen(req,timeout=15) as r:
+                      raw=r.read(4*1024*1024+1)
+                      status=r.status
+                      ct=r.headers.get("Content-Type","")
+                  if len(raw)>4*1024*1024:
+                      print(label,json.dumps({"status":status,"body":"too large"}));continue
+                  s=raw.decode("utf-8","replace")
+                  out={"status":status,"project_name_present":"siliconarena" in s.lower(),"repo_present":ownerrepo in s.lower(),"id_present":ident in s.lower()}
+                  if label=="ocl_record":
+                      obj=json.loads(s)
+                      if isinstance(obj,dict):
+                          node=obj.get("competition",obj)
+                          if isinstance(node,dict):
+                              for k in ("id","name","title","status","lastUpdated"):
+                                  v=node.get(k)
+                                  if isinstance(v,(str,int,bool)):out[k]=v
+                              stats=node.get("stats",{})
+                              if isinstance(stats,dict):out["stats"]={k:v for k,v in stats.items() if isinstance(v,(int,float,bool))}
+                              tracks=node.get("tracks",[])
+                              if isinstance(tracks,list):out["tracks"]=[{k:t[k] for k in ("id","name","metric","baseline","direction") if k in t} for t in tracks if isinstance(t,dict)][:10]
+                  if label=="skills_repo" or label=="skills_rtl":
+                      out["rtl_skill_present"]="rtl-optimizer" in s.lower()
+                  print(label,json.dumps(out,ensure_ascii=True)[:5000])
+              except urllib.error.HTTPError as e:
+                  print(label,json.dumps({"status":e.code}))
+              except Exception as e:
+                  print(label,json.dumps({"error":type(e).__name__}))
+          PY
