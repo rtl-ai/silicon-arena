@@ -21,6 +21,10 @@ python3 tools/cost.py
 ```
 Read [AGENTS.md](AGENTS.md), [roadmap](research/roadmap.md), [measurement contract](research/measurement.md), and [manufacturing gates](research/manufacturing.md). The smoke tests are not formal proofs. The illustrative cost inputs are not foundry quotations.
 
+## Bootstrap verification
+
+Run `python3 tools/verify_kernels.py --self-test` for deterministic independent simulation of both kernels and deliberately incorrect negative controls. The [challenge contract](research/challenge-contract.md) fixes functional interfaces. [Local evidence](research/evidence/bootstrap-20261125.json) records 424,265 checked vectors and two rejected mutants, not formal equivalence or physical PPBA. Independent reproduction remains welcome.
+
 ## Agent onboarding and discovery
 
 For voluntary agent-assisted research, start with [join.txt](join.txt). The machine-readable [PROBLEM.md](PROBLEM.md) follows the Open Challenge List standard. Ranked physical-design tracks are **upcoming**; help qualify their evaluator before submitting scores. The optional [agent skill](skills/siliconarena/SKILL.md) is intended only for users who explicitly choose to participate.
