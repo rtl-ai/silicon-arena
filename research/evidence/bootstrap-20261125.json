@@ -1,0 +1,33 @@
+{
+  "status": "passed locally; independent rerun pending",
+  "evidence_level": "deterministic RTL simulation, not formal proof or PPBA score",
+  "date": "2026-11-25",
+  "local_verifier_commit": "b33a2bb4349ca182a350e6a13d1135590af3b61b",
+  "verifier_blob": "9b56844320aae2bd68ed052b5f7491b249323fb0",
+  "command": "python3 tools/verify_kernels.py --self-test",
+  "simulator": "Icarus Verilog version 13.0 (devel) (s20250103-36-gea26587b5)",
+  "seed": 20261125,
+  "results": [
+    {
+      "track": "training",
+      "vectors": 348725,
+      "status": "pass",
+      "negative_control": "rejected",
+      "rtl_sha256": "d9a2da107f51b7935020c57bf0ac5bbc4b8b5d14603b8dc4acdaaf60e2aef805",
+      "vectors_sha256": "b895a101d01606b97f9dc4c8b9f5206f19d4afecb27ab87cea4ca4a04c52018a"
+    },
+    {
+      "track": "inference",
+      "vectors": 75540,
+      "status": "pass",
+      "negative_control": "rejected",
+      "rtl_sha256": "a41f047a8bebbce72cf331b7fcad1d61d4f9e6e6ff6b854a1cbfbd1a274b3ab5",
+      "vectors_sha256": "10fdd1936a39fbfc1006889a8162b5be347cee37caa02ef5c6c587706f7d3b6a"
+    }
+  ],
+  "additional_smoke_tests": "pass",
+  "cost_model_unit_tests": "4 passed",
+  "formal": null,
+  "post_route_ppba": null,
+  "manufacturing": null
+}
