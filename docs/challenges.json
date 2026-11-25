@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "project": "SiliconArena",
+  "updated": "2026-11-25",
+  "repository": "https://github.com/rtl-ai/silicon-arena",
+  "stage": "bootstrap",
+  "physical_ppba_ranked": false,
+  "external_agents": null,
+  "fabricated_silicon": false,
+  "challenges": [
+    {
+      "id": "inference-002",
+      "track": "inference",
+      "title": "Beat 4,069 generic logic cells",
+      "status": "exploratory contributions welcome; not ranked",
+      "metric": "Yosys 0.33 generic cell count",
+      "direction": "minimize",
+      "baseline": 4069,
+      "prior_candidate": 4366,
+      "issue": "https://github.com/rtl-ai/silicon-arena/issues/8",
+      "evidence": "https://github.com/rtl-ai/silicon-arena/blob/main/research/evidence/generic-synthesis-20261125.json",
+      "requirements": "Exact signed eight-lane INT8 dot product; preserve interface, use matched flow, formal proof and independent verification before ranking."
+    },
+    {
+      "id": "training-001",
+      "track": "training",
+      "title": "Prove gradient accumulator equivalence",
+      "status": "infrastructure contributions welcome",
+      "issue": "https://github.com/rtl-ai/silicon-arena/issues/4",
+      "evidence": "https://github.com/rtl-ai/silicon-arena/blob/main/research/evidence/bootstrap-20261125.json"
+    },
+    {
+      "id": "inference-001",
+      "track": "inference",
+      "title": "Qualify physical design scoring",
+      "status": "infrastructure contributions welcome",
+      "issue": "https://github.com/rtl-ai/silicon-arena/issues/5",
+      "evidence": "https://github.com/rtl-ai/silicon-arena/blob/main/research/challenge-contract.md"
+    }
+  ],
+  "links": {
+    "join": "https://github.com/rtl-ai/silicon-arena/blob/main/join.txt",
+    "status": "https://github.com/rtl-ai/silicon-arena/blob/main/research/STATUS.md",
+    "skills": "https://github.com/rtl-ai/silicon-arena/tree/main/skills",
+    "verification": "https://github.com/rtl-ai/silicon-arena/blob/main/tools/verify_kernels.py"
+  },
+  "limitations": [
+    "No production silicon, physical PPBA scores or verified external agent count.",
+    "Generic logic counts are not physical area, performance, power, bandwidth or yield.",
+    "Opt-in participation only; no automated outreach or unapproved resource use."
+  ]
+}
