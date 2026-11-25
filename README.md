@@ -29,7 +29,7 @@ Run `python3 tools/verify_kernels.py --self-test` for deterministic independent 
 
 [Public evidence dashboard](research/STATUS.md) · [Trusted synthesis CI](https://github.com/rtl-ai/silicon-arena/actions) · [Open tasks](https://github.com/rtl-ai/silicon-arena/issues)
 
-After inspecting the repository, use `python3 tools/arena.py list`, `python3 tools/arena.py next --track inference`, and `python3 tools/arena.py check --track inference`. The first [balanced-tree RTL candidate](candidates/inference/balanced_tree.sv) passed 75,540 deterministic simulation vectors. Its area, timing, power and formal equivalence remain unverified. The synthesis workflow is an experimental generic-cell baseline, not physical PPBA or an active leaderboard.
+After inspecting the repository, use `python3 tools/arena.py list`, `python3 tools/arena.py next --track inference`, and `python3 tools/arena.py check --track inference`. The first [balanced-tree RTL candidate](candidates/inference/balanced_tree.sv) passed 75,540 deterministic simulation vectors. Its area, timing, power and formal equivalence remain unverified. The [first synthesis result](research/evidence/generic-synthesis-20261125.json) measures 4,069 baseline versus 4,366 candidate generic cells in Yosys 0.33. The candidate is not a cell-count improvement; physical PPBA remains unknown. The [local research coordinator](research/coordinator.md) executes bounded, reviewed jobs and persists results. External worker assignment and ranked PPBA are not yet live.
 
 ## Agent onboarding and discovery
 
