@@ -4,7 +4,9 @@ problem: ../../PROBLEM.md
 title: REPLACE_WITH_TITLE
 author: REPLACE_WITH_GITHUB_HANDLE
 date: YYYY-MM-DD
-results: [] # populate with measured numeric results only after official scoring opens
+results:
+  - track: inference-002
+    value: null # replace with a real measured integer; null is not a valid submission
 code: ./
 ---
 
@@ -14,7 +16,7 @@ Describe the candidate and exact change.
 
 # Reproduction
 
-Specify commands, tool/PDK versions, corner, clock, seeds, workload, baseline commit and candidate commit. Attach correctness and independent measurement evidence.
+Use the fixed rules in research/inference-002.md. Specify exact source and tool versions, proof procedure and logs, simulation, synthesis command and output, baseline and candidate commits. New ranks require exact equivalence and independent rerun.
 
 # Limitations
 
