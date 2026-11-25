@@ -1,0 +1,37 @@
+name: Trusted generic synthesis baseline
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'inference/**'
+      - 'candidates/inference/**'
+      - 'tools/logic_score.py'
+      - 'tools/verify_kernels.py'
+      - '.github/workflows/logic-baseline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  baseline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install public distribution tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y iverilog yosys
+          dpkg-query -W iverilog yosys
+      - name: Evaluate trusted main sources
+        run: python3 tools/logic_score.py
+      - name: Show results
+        run: |
+          printf '### Generic synthesis evidence (not physical PPBA)\n\n```json\n' >> "$GITHUB_STEP_SUMMARY"
+          cat logic-score.json >> "$GITHUB_STEP_SUMMARY"
+          printf '\n```\n' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: generic-synthesis-evidence
+          path: logic-score.json
