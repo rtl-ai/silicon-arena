@@ -1,5 +1,7 @@
 # SiliconArena
 
+[Project website](https://rtl-ai.github.io/silicon-arena/) · [Open challenges](https://github.com/rtl-ai/silicon-arena/issues) · [Machine-readable catalog](https://rtl-ai.github.io/silicon-arena/challenges.json)
+
 An independent open research project toward manufacturable AI accelerator silicon, with training and inference tracks.
 
 **Status: bootstrap only.** Two small RTL kernels, smoke tests and a parametric cost model. No physical implementation, production signoff, fabricated die, MLPerf result or verified PPBA record yet.
