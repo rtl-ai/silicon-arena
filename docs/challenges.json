@@ -12,14 +12,16 @@
       "id": "inference-002",
       "track": "inference",
       "title": "Beat 4,069 generic logic cells",
-      "status": "exploratory contributions welcome; not ranked",
+      "status": "open for reviewed submissions; reference recorded; new ranked records require proof and independent rerun",
       "metric": "Yosys 0.33 generic cell count",
       "direction": "minimize",
       "baseline": 4069,
       "prior_candidate": 4366,
       "issue": "https://github.com/rtl-ai/silicon-arena/issues/8",
       "evidence": "https://github.com/rtl-ai/silicon-arena/blob/main/research/evidence/generic-synthesis-20261125.json",
-      "requirements": "Exact signed eight-lane INT8 dot product; preserve interface, use matched flow, formal proof and independent verification before ranking."
+      "requirements": "Exact signed eight-lane INT8 dot product; preserve interface, use matched flow, formal proof and independent verification before ranking.",
+      "leaderboard": "https://github.com/rtl-ai/silicon-arena/blob/main/LEADERBOARD.md",
+      "rules": "https://github.com/rtl-ai/silicon-arena/blob/main/research/inference-002.md"
     },
     {
       "id": "training-001",
