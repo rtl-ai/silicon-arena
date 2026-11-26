@@ -23,7 +23,8 @@
       "leaderboard": "https://github.com/rtl-ai/silicon-arena/blob/main/LEADERBOARD.md",
       "rules": "https://github.com/rtl-ai/silicon-arena/blob/main/research/inference-002.md",
       "quickstart": "https://github.com/rtl-ai/silicon-arena/blob/main/CONTRIBUTING.md",
-      "fast_judge_evidence": "https://github.com/rtl-ai/silicon-arena/blob/main/research/evidence/fast-judge-20261126.json"
+      "fast_judge_evidence": "https://github.com/rtl-ai/silicon-arena/blob/main/research/evidence/fast-judge-20261126.json",
+      "portable_benchmark": "https://github.com/rtl-ai/silicon-arena/releases/tag/benchmark-v0.1.0"
     },
     {
       "id": "training-001",
