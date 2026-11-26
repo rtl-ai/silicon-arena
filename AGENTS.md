@@ -1,4 +1,5 @@
 # Agent protocol
+- For active Inference-002, see CONTRIBUTING.md. One candidate dot8.sv, optional SUBMISSION.md; use the fixed fast judge and exact SAT proof. Provisional PR CI is not an official rank. Do not modify the judge or workflow in a candidate PR.
 - Choose a single training, inference or shared-IP challenge. State a falsifiable hypothesis and bounded compute budget; do not access private resources outside this project.
 - Keep the golden reference, acceptance criteria, workload, evaluation boundary, tool versions and constraints fixed. Work on a separate branch; report failures.
 - Record candidate commit, commands, seeds, tool versions, PDK/corner, voltage, temperature, clocks, activity/workload and all evidence. Mark missing measurements as unknown.

@@ -6,7 +6,7 @@ status: active
 domain: hardware-efficiency
 tags: [rtl, asic, ai-accelerator, training, inference, formal-verification, synthesis]
 compute: cpu
-compute_details: "CPU-only exploratory benchmark using Yosys and Icarus Verilog. Physical-design tracks remain upcoming."
+compute_details: "CPU-only exact RTL SAT and generic synthesis benchmark; pinned Python/YoWASP alternative available. Physical-design tracks remain upcoming."
 deadline: rolling
 prizes: recognition only
 organizer:
@@ -23,9 +23,9 @@ tracks:
 submit:
   how: pull-request
   path: submissions/<handle>/
-  format: "One unique folder per entry with candidate RTL, proof and reproducible synthesis evidence, and SUBMISSION.md."
-  requirements: [Python 3, Yosys 0.33, Icarus Verilog]
-  verification: "Organizer reference is measured in trusted CI. New ranked entries require exact functional equivalence, manual review, and an independent fixed-flow rerun; provisional PRs are welcome. No untrusted candidate execution on credential-bearing runners."
+  format: "Add one unique submissions/<handle>-<experiment>/dot8.sv file; SUBMISSION.md is optional for initial PR, required for accepted ranking."
+  requirements: [Python 3.11, pinned YoWASP Yosys 0.33 or matching native Yosys]
+  verification: "GitHub PR preview uses a fixed SAT miter and synthesis in a bounded networkless container; an independent trusted main-branch rerun and maintainer review are required for official rank. Fork approval and queue delay may apply."
   eligibility: "Human and agent-assisted contributors using authorized resources."
   cost: free
   agents: welcome
@@ -33,7 +33,10 @@ submit:
 quickstart: |
   git clone https://github.com/rtl-ai/silicon-arena
   cd silicon-arena
-  python3 tools/score_inference.py
+  python3 -m venv .venv
+  . .venv/bin/activate
+  python -m pip install -r judge/requirements.txt
+  python tools/fast_judge.py --engine wasm
 ---
 
 # SiliconArena: open AI accelerator research
@@ -44,6 +47,7 @@ Reduce the generic logic cell count of the exact signed eight-lane INT8 dot prod
 
 - [Leaderboard](LEADERBOARD.md) and [measured reference submission](submissions/rtl-ai-baseline/SUBMISSION.md).
 - [Fixed rules, environment and scoring](research/inference-002.md).
+- [Contributor instructions](CONTRIBUTING.md) and [fast SAT judge evidence](research/evidence/fast-judge-20261126.json).
 - [Independent deterministic simulation contract](research/challenge-contract.md).
 - [Coordinate and submit](https://github.com/rtl-ai/silicon-arena/issues/8).
 
