@@ -1,6 +1,6 @@
 # SiliconArena
 
-[Project website](https://rtl-ai.github.io/silicon-arena/) · [Leaderboard](LEADERBOARD.md) · [Open challenges](https://github.com/rtl-ai/silicon-arena/issues) · [Machine-readable catalog](https://rtl-ai.github.io/silicon-arena/challenges.json)
+[Project website](https://rtl-ai.github.io/silicon-arena/) · [Download portable benchmark v0.1.0](https://github.com/rtl-ai/silicon-arena/releases/tag/benchmark-v0.1.0) · [Leaderboard](LEADERBOARD.md) · [Open challenges](https://github.com/rtl-ai/silicon-arena/issues) · [Machine-readable catalog](https://rtl-ai.github.io/silicon-arena/challenges.json)
 
 An independent open research project toward manufacturable AI accelerator silicon, with training and inference tracks.
 

@@ -3,52 +3,53 @@ on:
   push:
     branches: [main]
     paths:
+      - 'docs/index.html'
+      - 'docs/sitemap.xml'
       - 'docs/866e68e7de7d0d0b5d9810e8d57d29b3d48a6dfe.txt'
       - '.github/workflows/site-discovery.yml'
   workflow_dispatch:
 permissions: {}
+concurrency:
+  group: public-site-discovery
+  cancel-in-progress: true
 jobs:
   verify-and-submit:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 6
     steps:
-      - name: Verify public pages and submit homepage to IndexNow
+      - name: Check public site and notify IndexNow after release update
         run: |
           python3 - <<'PY'
-          import json, time, urllib.request, urllib.error
-          from xml.etree import ElementTree
-          base = "https://rtl-ai.github.io/silicon-arena/"
-          key = "866e68e7de7d0d0b5d9810e8d57d29b3d48a6dfe"
-          key_url = base + key + ".txt"
+          import json,time,urllib.request,urllib.error
+          from xml.etree import ElementTree as ET
+          base="https://rtl-ai.github.io/silicon-arena/"
+          key="866e68e7de7d0d0b5d9810e8d57d29b3d48a6dfe"
+          key_url=base+key+".txt"
           def get(url):
-              with urllib.request.urlopen(url, timeout=15) as response:
-                  if response.status != 200:
-                      raise ValueError("unexpected HTTP status")
-                  return response.read(1024 * 1024)
+              with urllib.request.urlopen(url,timeout=12) as r:
+                  if r.status!=200: raise ValueError("unexpected status")
+                  return r.read(1024*1024)
           for attempt in range(12):
               try:
-                  if get(key_url).decode().strip() == key:
-                      break
-              except (OSError, ValueError):
-                  pass
-              if attempt == 11:
-                  raise SystemExit("Site key not publicly verified; no submission")
-              time.sleep(10)
-          assert b"SiliconArena" in get(base)
-          assert b"SiliconArena" in get(base + "llms.txt")
-          catalog = json.loads(get(base + "challenges.json"))
-          assert catalog["project"] == "SiliconArena"
-          ElementTree.fromstring(get(base + "sitemap.xml"))
-          print("PUBLIC_HTTP_CHECK=PASS")
-          body = json.dumps({"host":"rtl-ai.github.io","key":key,"keyLocation":key_url,"urlList":[base]}).encode()
-          req = urllib.request.Request("https://api.indexnow.org/indexnow",data=body,headers={"Content-Type":"application/json; charset=utf-8"},method="POST")
+                  page=get(base)
+                  assert b"benchmark-v0.1.0" in page and b"SiliconArena" in page
+                  assert b'google-site-verification' in page
+                  assert get(key_url).decode().strip()==key
+                  urls=[el.text for el in ET.fromstring(get(base+"sitemap.xml")).findall("{*}url/{*}loc")]
+                  assert base in urls
+                  assert get(base+"google1d354279a3691287.html").decode().strip().startswith("google-site-verification:")
+                  print("PUBLIC_HTTP_CHECK=PASS")
+                  break
+              except (OSError,ValueError,AssertionError) as e:
+                  print("public check",attempt+1,type(e).__name__,getattr(e,"code",""))
+                  if attempt==11: raise SystemExit("Public page or verification files not confirmed; no submission")
+                  time.sleep(10)
+          body=json.dumps({"host":"rtl-ai.github.io","key":key,"keyLocation":key_url,"urlList":[base]}).encode()
+          req=urllib.request.Request("https://api.indexnow.org/indexnow",data=body,headers={"Content-Type":"application/json; charset=utf-8"},method="POST")
           try:
-              with urllib.request.urlopen(req,timeout=30) as resp:
-                  status = resp.status
-          except urllib.error.HTTPError as exc:
-              status = exc.code
-          print(f"INDEXNOW_HTTP_STATUS={status}")
-          if status not in (200,202):
-              raise SystemExit("IndexNow submission not accepted")
+              with urllib.request.urlopen(req,timeout=20) as resp: status=resp.status
+          except urllib.error.HTTPError as e: status=e.code
+          print("INDEXNOW_HTTP_STATUS="+str(status))
+          if status not in (200,202): raise SystemExit("IndexNow not accepted")
           print("Submission accepted; indexing is not guaranteed.")
           PY
