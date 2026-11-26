@@ -54,7 +54,7 @@ jobs:
           set -euo pipefail
           docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --pids-limit 128 --memory 2g --cpus 2 --tmpfs /tmp:rw,nosuid,nodev,noexec,size=256m --mount "type=bind,source=$RUNNER_TEMP/arena-input,target=/arena,readonly" arena-judge /arena/candidate.sv | tee "$RUNNER_TEMP/arena-result.json"
           python3 -c 'import json,sys; r=json.load(open(sys.argv[1])); assert r["status"]=="proved"; print("PROVED; generic cells:",r["generic_cells"])' "$RUNNER_TEMP/arena-result.json"
-          { printf '### Provisional SAT-verified score\n\n'; python3 -c 'import json,sys; r=json.load(open(sys.argv[1])); print("Generic cells:",r["generic_cells"],"; reference:",r["baseline"],"; SAT seconds:",r["proof_seconds"])' "$RUNNER_TEMP/arena-result.json"; } >> "$GITHUB_STEP_SUMMARY"
+          { printf '### Provisional proof-verified score\n\n'; python3 -c 'import json,sys; r=json.load(open(sys.argv[1])); print("Generic cells:",r["generic_cells"],"; reference:",r["baseline"],"; proof seconds:",r["proof_seconds"],"; method:",r["proof"])' "$RUNNER_TEMP/arena-result.json"; } >> "$GITHUB_STEP_SUMMARY"
       - name: Trusted qualification (baseline, candidate, bad control)
         if: github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || inputs.pr_number == '')
         run: |
@@ -69,7 +69,7 @@ jobs:
           }
           evaluate /arena/inference/dot8.sv | tee "$RUNNER_TEMP/base.json"
           evaluate /arena/positive.sv | tee "$RUNNER_TEMP/candidate.json"
-          python3 -c 'import json,sys; a,b=[json.load(open(p)) for p in sys.argv[1:]]; assert a["status"]==b["status"]=="proved"; assert a["generic_cells"]==4069 and b["generic_cells"]==4366' "$RUNNER_TEMP/base.json" "$RUNNER_TEMP/candidate.json"
+          python3 -c 'import json,sys; a,b=[json.load(open(p)) for p in sys.argv[1:]]; assert a["status"]==b["status"]=="proved"; assert a["generic_cells"]==4069 and b["generic_cells"]==4366 and b["proof"].startswith("algebraic")' "$RUNNER_TEMP/base.json" "$RUNNER_TEMP/candidate.json"
           if evaluate /arena/negative.sv; then echo "Bad control accepted"; exit 1; fi
           echo "Native isolated qualification and negative control: PASS"
           for candidate in serial19 grouped4 carry_save19; do

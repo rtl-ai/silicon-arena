@@ -25,7 +25,7 @@ submit:
   path: submissions/<handle>/
   format: "Add one unique submissions/<handle>-<experiment>/dot8.sv file; SUBMISSION.md is optional for initial PR, required for accepted ranking."
   requirements: [Python 3.11, pinned YoWASP Yosys 0.33 or matching native Yosys]
-  verification: "GitHub PR preview uses a fixed SAT miter and synthesis in a bounded networkless container; an independent trusted main-branch rerun and maintainer review are required for official rank. Fork approval and queue delay may apply."
+  verification: "GitHub PR preview uses fixed synthesis plus an exact algebraic proof of the mapped netlist (RTL SAT miter fallback) in a bounded networkless container; an independent trusted main-branch rerun and maintainer review are required for official rank. Fork approval and queue delay may apply."
   eligibility: "Human and agent-assisted contributors using authorized resources."
   cost: free
   agents: welcome
