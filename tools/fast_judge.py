@@ -87,6 +87,7 @@ def design_json(path, mapped=False):
 
 SPEC_BITS = 19  # every exact dot8 result lies in [-130048, 131072], so it fits signed 19 bits
 ALG_CAP = 200000
+GATES = {"BUF","NOT","AND","NAND","OR","NOR","XOR","XNOR","ANDNOT","ORNOT","MUX","NMUX"}
 
 def _poly(cell, M):
     """Multilinear polynomial (frozenset of nets -> coefficient mod M) of one mapped gate output."""
@@ -124,6 +125,8 @@ def algebraic_proof(m, cap=ALG_CAP):
     if any(r[k]!=r[SPEC_BITS-1] for k in range(SPEC_BITS,32)):
         return None
     M=1<<SPEC_BITS
+    if any(c["type"][2:-1] not in GATES or "Y" not in c["connections"] for c in m["cells"].values()):
+        return None
     drv={c["connections"]["Y"][0]:(c["type"][2:-1],c["connections"]) for c in m["cells"].values()}
     fanin=lambda n:[drv[n][1][p][0] for p in ("A","B","S") if p in drv[n][1]]
     order,seen=[],set()

@@ -40,6 +40,9 @@ class AlgebraicProof(unittest.TestCase):
         self.assertIs(algebraic_proof({"ports":ports([200]+["0"]*31),"cells":{"g":cell}}),False)
     def test_missing_sign_extension_is_inconclusive(self):
         self.assertIsNone(algebraic_proof({"ports":ports(["0"]*19+["1"]+["0"]*12),"cells":{}}))
+    def test_unknown_cell_type_is_inconclusive(self):
+        cell={"type":"$_DFF_P_","connections":{"C":[2],"D":[66],"Q":[200]}}
+        self.assertIsNone(algebraic_proof({"ports":ports([200]+["0"]*31),"cells":{"ff":cell}}))
 
 @unittest.skipUnless(shutil.which("yowasp-yosys"),"pinned yowasp-yosys from judge/requirements.txt is required")
 class AlgebraicProofNetlists(unittest.TestCase):
