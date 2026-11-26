@@ -14,10 +14,10 @@
 
 | Design | Generic cells | Correctness evidence | Outcome |
 | --- | ---: | --- | --- |
-| Range-bounded balanced adder tree | 4366 | 75,540 deterministic vectors passed; formal pending | 297 more cells; retain as a negative result |
+| Range-bounded balanced adder tree | 4366 | 75,540 deterministic vectors passed; RTL SAT proved | 297 more cells; retain as a negative result |
 
-[Recorded synthesis evidence](research/evidence/generic-synthesis-20261125.json).
+[Recorded synthesis evidence](research/evidence/generic-synthesis-20261125.json) · [Native and portable SAT evidence](research/evidence/fast-judge-20261126.json).
 
 ## Submit
 
-Read [PROBLEM.md](PROBLEM.md), [rules and scoring](research/inference-002.md), and [issue #8](https://github.com/rtl-ai/silicon-arena/issues/8). Use one new submission folder per entry, include exact source, score, proof evidence, and reproducible commands. Only maintainers promote independently verified results to the default branch. Until then, record candidates as provisional PRs or unranked experiments. No fees, unsolicited outreach, or private data.
+Read [PROBLEM.md](PROBLEM.md), [rules and scoring](research/inference-002.md), and [issue #8](https://github.com/rtl-ai/silicon-arena/issues/8). Use one new submission folder per entry containing dot8.sv; SUBMISSION.md may be added with measured evidence after the automatic provisional PR check. See [CONTRIBUTING.md](CONTRIBUTING.md). Only maintainers promote independently verified results to the default branch. Until then, record candidates as provisional PRs or unranked experiments. No fees, unsolicited outreach, or private data.

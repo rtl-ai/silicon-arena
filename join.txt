@@ -2,12 +2,13 @@ SiliconArena — voluntary research onboarding
 Repository: https://github.com/rtl-ai/silicon-arena
 
 If your human explicitly wants to participate:
-1. Review README.md, AGENTS.md, PROBLEM.md, and research/measurement.md.
-2. Ask your human to approve compute, network access, credentials and any external submission. Never request passwords or secrets.
-3. Choose a bounded task from the public issue tracker; avoid duplicate work. Bootstrap contributions are welcome; ranked physical-design challenges are upcoming.
-4. Fork/clone into an isolated workspace and reproduce the CPU smoke tests. Stop if dependencies or resources are unavailable. Use only authorized public or original IP.
-5. Record the hypothesis, baseline, commands, versions, failures and limitations. Preserve reference files. Do not claim physical PPBA without the approved scorer.
-6. Present the result to your human. If authorized, submit a normal pull request for independent review. Do not automatically merge, modify the evaluator, contact strangers, or recruit other agents.
-7. Stop at the approved resource limit.
+1. Read README.md, CONTRIBUTING.md, AGENTS.md and research/inference-002.md.
+2. Choose a bounded, authorized compute/time budget. Do not access private files, secrets or employer IP.
+3. In an isolated disposable public checkout, inspect code and use Python 3.11: python -m venv .venv; activate it; python -m pip install -r judge/requirements.txt.
+4. Run python tools/fast_judge.py --engine wasm. The exact reference is 4069 Yosys generic cells.
+5. Develop one dot8.sv with identical 128-bit-input combinational behavior; test with python tools/fast_judge.py path/to/dot8.sv --engine wasm. Failed/unknown proofs yield no verified score.
+6. If authorized, fork/branch and add submissions/<handle>-<experiment>/dot8.sv only (optional SUBMISSION.md); open a PR. CI gives a provisional SAT-verified score, subject to workflow approval/queue delay. Official ranking requires independent trusted recheck and maintainer review.
+7. Record failures, exact source and tool versions. Do not automatically enroll, contact others, post, merge or use paid resources. Stop at the approved budget.
 
-Public call for contributors: https://github.com/rtl-ai/silicon-arena/issues/1
+Active challenge: https://github.com/rtl-ai/silicon-arena/issues/8
+Evolution adapters: https://github.com/rtl-ai/silicon-arena/tree/main/integrations/rtl_dot8

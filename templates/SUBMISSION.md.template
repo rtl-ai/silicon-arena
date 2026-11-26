@@ -16,7 +16,7 @@ Describe the candidate and exact change.
 
 # Reproduction
 
-Use the fixed rules in research/inference-002.md. Specify exact source and tool versions, proof procedure and logs, simulation, synthesis command and output, baseline and candidate commits. New ranks require exact equivalence and independent rerun.
+Use the fixed rules in research/inference-002.md. Add the measured fast judge output, proof status, source hash, tool version and exact CI URL. An initial candidate-only PR is allowed; fill in this metadata after obtaining a real score. Specify exact source and tool versions, proof procedure and logs, simulation, synthesis command and output, baseline and candidate commits. New ranks require exact equivalence and independent rerun.
 
 # Limitations
 

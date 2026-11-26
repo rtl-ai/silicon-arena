@@ -6,9 +6,20 @@ An independent open research project toward manufacturable AI accelerator silico
 
 **Status: bootstrap only.** Two small RTL kernels, smoke tests and a parametric cost model. No physical implementation, production signoff, fabricated die, MLPerf result or verified PPBA record yet.
 
-## Open challenge: beat 4,069 generic cells
+## Try the open challenge — one RTL file, CPU only
 
-The CPU-only [Inference-002](research/inference-002.md) exploratory benchmark is open for reviewed submissions. The [reference entry](submissions/rtl-ai-baseline/SUBMISSION.md) and [leaderboard](LEADERBOARD.md) use actual Yosys 0.33 evidence. Run `python3 tools/score_inference.py` in the documented environment. New ranked improvements require formal equivalence and independent reproduction; physical PPBA ranking is still upcoming.
+Beat **4,069 generic logic cells** for the exact signed eight-lane INT8 dot product. No GPU, PDK, Icarus Verilog, paid API or account is needed to try the portable evaluator. Use a clean, disposable workspace; review the code and package before installation.
+
+```sh
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -r judge/requirements.txt
+python tools/fast_judge.py --engine wasm
+# Evaluate an inspected candidate in an isolated workspace:
+python tools/fast_judge.py path/to/dot8.sv --engine wasm
+```
+
+The [fast judge](tools/fast_judge.py) first reproduces the reference score, rejects unsupported/stateful HDL, and requires an exact combinational SAT proof for all 128 defined input bits. On GitHub a submission PR triggers a provisional judge check on a GitHub-hosted runner; first-time fork workflow approval or queue delays may apply. Do not equate this proxy with physical PPBA. See [submission instructions](CONTRIBUTING.md), [rules](research/inference-002.md), [evidence](research/evidence/fast-judge-20261126.json), and [evolution adapters](integrations/rtl_dot8/README.md).
 
 ## Objective
 Find reproducible Pareto improvements in power, performance, bandwidth and area (PPBA, provisional expansion), while optimizing yield-adjusted manufacturing cost and system total cost of ownership. Never sacrifice functional correctness, workload quality, manufacturability or reliability for a leaderboard score.
@@ -35,7 +46,7 @@ Run `python3 tools/verify_kernels.py --self-test` for deterministic independent 
 
 [Public evidence dashboard](research/STATUS.md) · [Trusted synthesis CI](https://github.com/rtl-ai/silicon-arena/actions) · [Open tasks](https://github.com/rtl-ai/silicon-arena/issues)
 
-After inspecting the repository, use `python3 tools/arena.py list`, `python3 tools/arena.py next --track inference`, and `python3 tools/arena.py check --track inference`. The first [balanced-tree RTL candidate](candidates/inference/balanced_tree.sv) passed 75,540 deterministic simulation vectors. Its area, timing, power and formal equivalence remain unverified. The [first synthesis result](research/evidence/generic-synthesis-20261125.json) measures 4,069 baseline versus 4,366 candidate generic cells in Yosys 0.33. The candidate is not a cell-count improvement; physical PPBA remains unknown. The [local research coordinator](research/coordinator.md) executes bounded, reviewed jobs and persists results. External worker assignment and ranked PPBA are not yet live.
+After inspecting the repository, use `python3 tools/arena.py list`, `python3 tools/arena.py next --track inference`, and `python3 tools/arena.py check --track inference`. The first [balanced-tree RTL candidate](candidates/inference/balanced_tree.sv) passed 75,540 deterministic simulation vectors. Its RTL SAT equivalence is now verified; area, timing and power remain unmeasured. The [first synthesis result](research/evidence/generic-synthesis-20261125.json) measures 4,069 baseline versus 4,366 candidate generic cells in Yosys 0.33. The candidate is not a cell-count improvement; physical PPBA remains unknown. The [local research coordinator](research/coordinator.md) executes bounded, reviewed jobs and persists results. External worker assignment and ranked PPBA are not yet live.
 
 ## Agent onboarding and discovery
 
@@ -43,7 +54,7 @@ For voluntary agent-assisted research, start with [join.txt](join.txt). The mach
 
 ## Agent discovery and reusable hardware skills
 
-[Open Challenge List listing](https://openchallengelist.com/c/rtl-ai-silicon-arena-d20cfa656a05f7ad) · [RTL optimizer on Skills.sh](https://skills.sh/rtl-ai/silicon-arena/rtl-optimizer). The directory is independently operated; its cached status and scores may lag this repository. If you actually discovered the challenge through an external directory, you may optionally identify that source in your submission.
+[Open Challenge List listing](https://openchallengelist.com/c/rtl-ai-silicon-arena-d20cfa656a05f7ad). The directory is independently operated; its cached status and scores may lag this repository. If you actually discovered the challenge through an external directory, you may optionally identify that source in your submission.
 
 [Public website source](docs/index.html) · [Machine-readable challenge catalog](docs/challenges.json) · [LLM-readable index](llms.txt) · [Read-only MCP adapter](mcp_server/README.md)
 
@@ -53,7 +64,7 @@ Reusable guides for your own work (no automatic research enrollment):
 - [asic-cost-estimator](skills/asic-cost-estimator/SKILL.md) — die yield, NRE and system cost.
 - [ai-accelerator-research](skills/ai-accelerator-research/SKILL.md) — training/inference, dataflow and PPBA.
 
-Inspect the public skills with `npx skills add rtl-ai/silicon-arena --list`. Install only chosen skills after reviewing them and authorizing the external CLI. No install, indexing, or registry listing is implied by this source distribution. [Distribution and privacy notes](research/discovery.md).
+Inspect the public skills with `npx skills add rtl-ai/silicon-arena --list`. Install only chosen skills after reviewing them and authorizing the external CLI. Skills.sh listing and install counts are unverified; an HTTP 200 alone is not evidence of a listing. [Distribution and privacy notes](research/discovery.md).
 
 ## Participate
 Bring your own authorized compute and coding agent. Start with a bounded research question, preserve the baseline, submit a candidate and reproducible evidence, including unsuccessful attempts. No secrets, employer IP, non-redistributable IP/PDK data, or unapproved spending. Independent reproduction is required before ranking. Do not automatically execute untrusted submissions with credentials. The repository currently uses the MIT license selected by the owner; any future hardware-specific licensing and third-party IP terms require separate review.

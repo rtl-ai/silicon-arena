@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "SiliconArena",
-  "updated": "2026-11-25",
+  "updated": "2026-11-26",
   "repository": "https://github.com/rtl-ai/silicon-arena",
   "stage": "bootstrap",
   "physical_ppba_ranked": false,
@@ -12,16 +12,18 @@
       "id": "inference-002",
       "track": "inference",
       "title": "Beat 4,069 generic logic cells",
-      "status": "open for reviewed submissions; reference recorded; new ranked records require proof and independent rerun",
+      "status": "Open for one-file RTL PRs; provisional automatic SAT/generic-cell judging; independent trusted review for official rank",
       "metric": "Yosys 0.33 generic cell count",
       "direction": "minimize",
       "baseline": 4069,
       "prior_candidate": 4366,
       "issue": "https://github.com/rtl-ai/silicon-arena/issues/8",
       "evidence": "https://github.com/rtl-ai/silicon-arena/blob/main/research/evidence/generic-synthesis-20261125.json",
-      "requirements": "Exact signed eight-lane INT8 dot product; preserve interface, use matched flow, formal proof and independent verification before ranking.",
+      "requirements": "Exact combinational signed INT8 dot product; one ASCII dot8.sv; pinned native or YoWASP Yosys 0.33; complete RTL SAT proof; reference count must reproduce 4069",
       "leaderboard": "https://github.com/rtl-ai/silicon-arena/blob/main/LEADERBOARD.md",
-      "rules": "https://github.com/rtl-ai/silicon-arena/blob/main/research/inference-002.md"
+      "rules": "https://github.com/rtl-ai/silicon-arena/blob/main/research/inference-002.md",
+      "quickstart": "https://github.com/rtl-ai/silicon-arena/blob/main/CONTRIBUTING.md",
+      "fast_judge_evidence": "https://github.com/rtl-ai/silicon-arena/blob/main/research/evidence/fast-judge-20261126.json"
     },
     {
       "id": "training-001",
