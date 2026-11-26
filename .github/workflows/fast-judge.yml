@@ -7,6 +7,15 @@ on:
     branches: [main, feat/fast-judge-20261126]
     paths: ['tools/fast_judge.py','tools/collect_submission.py','judge/**','integrations/**','candidates/inference/**','.github/workflows/fast-judge.yml']
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Optional PR number for independent trusted main-branch recheck'
+        required: false
+        type: string
+      head_sha:
+        description: 'Exact reviewed 40-character PR head commit'
+        required: false
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -27,26 +36,27 @@ jobs:
           mkdir -p "$RUNNER_TEMP/empty-build"
           docker build --pull -t arena-judge -f judge/Dockerfile "$RUNNER_TEMP/empty-build"
       - name: Collect one submitted HDL blob
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.pr_number != '')
         env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || inputs.head_sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
         run: |
           set -eu
           [[ "$PR_NUMBER" =~ ^[0-9]+$ && "$HEAD_SHA" =~ ^[0-9a-f]{40}$ && "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$GITHUB_REF" != "refs/heads/main" ]]; then exit 1; fi
           git fetch --no-tags origin "refs/pull/$PR_NUMBER/head"
           test "$(git rev-parse FETCH_HEAD)" = "$HEAD_SHA"
           python3 tools/collect_submission.py --head "$HEAD_SHA" --base "$BASE_SHA" --out "$RUNNER_TEMP/arena-input"
       - name: Preview submitted score (no automatic ranking)
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.pr_number != '')
         run: |
           set -euo pipefail
           docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --pids-limit 128 --memory 2g --cpus 2 --tmpfs /tmp:rw,nosuid,nodev,noexec,size=256m --mount "type=bind,source=$RUNNER_TEMP/arena-input,target=/arena,readonly" arena-judge /arena/candidate.sv | tee "$RUNNER_TEMP/arena-result.json"
           python3 -c 'import json,sys; r=json.load(open(sys.argv[1])); assert r["status"]=="proved"; print("PROVED; generic cells:",r["generic_cells"])' "$RUNNER_TEMP/arena-result.json"
           { printf '### Provisional SAT-verified score\n\n'; python3 -c 'import json,sys; r=json.load(open(sys.argv[1])); print("Generic cells:",r["generic_cells"],"; reference:",r["baseline"],"; SAT seconds:",r["proof_seconds"])' "$RUNNER_TEMP/arena-result.json"; } >> "$GITHUB_STEP_SUMMARY"
       - name: Trusted qualification (baseline, candidate, bad control)
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || inputs.pr_number == '')
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/arena-input/tools" "$RUNNER_TEMP/arena-input/inference"
@@ -55,15 +65,20 @@ jobs:
           cp candidates/inference/balanced_tree.sv "$RUNNER_TEMP/arena-input/positive.sv"
           printf 'module dot8(input wire [63:0] a,b,output wire signed [31:0] result); assign result=0; endmodule\n' > "$RUNNER_TEMP/arena-input/negative.sv"
           evaluate() {
-            docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --pids-limit 128 --memory 2g --cpus 2 --tmpfs /tmp:rw,nosuid,nodev,noexec,size=256m --mount "type=bind,source=$RUNNER_TEMP/arena-input,target=/arena,readonly" arena-judge "$1"
+            docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --pids-limit 128 --memory 2g --cpus 2 --tmpfs /tmp:rw,nosuid,nodev,noexec,size=256m --mount "type=bind,source=$RUNNER_TEMP/arena-input,target=/arena,readonly" arena-judge "$@"
           }
           evaluate /arena/inference/dot8.sv | tee "$RUNNER_TEMP/base.json"
           evaluate /arena/positive.sv | tee "$RUNNER_TEMP/candidate.json"
           python3 -c 'import json,sys; a,b=[json.load(open(p)) for p in sys.argv[1:]]; assert a["status"]==b["status"]=="proved"; assert a["generic_cells"]==4069 and b["generic_cells"]==4366' "$RUNNER_TEMP/base.json" "$RUNNER_TEMP/candidate.json"
           if evaluate /arena/negative.sv; then echo "Bad control accepted"; exit 1; fi
           echo "Native isolated qualification and negative control: PASS"
+          for candidate in serial19 grouped4 carry_save19; do
+            cp "candidates/inference/$candidate.sv" "$RUNNER_TEMP/arena-input/experiment.sv"
+            echo "EXPERIMENT=$candidate"
+            if evaluate /arena/experiment.sv --proof-timeout 60; then echo EXPERIMENT_PROVED; else echo EXPERIMENT_NOT_PROVED; fi
+          done
   portable:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || inputs.pr_number == '')
     runs-on: ubuntu-24.04
     timeout-minutes: 7
     steps:
@@ -80,3 +95,8 @@ jobs:
           python tools/fast_judge.py candidates/inference/balanced_tree.sv --engine wasm | tee candidate.json
           python -c 'import json; a=json.load(open("base.json")); b=json.load(open("candidate.json")); assert a["generic_cells"]==4069 and b["generic_cells"]==4366'
           python -m unittest discover -s tests -p test_fast_judge.py -v
+          python tools/export_evolution_example.py "$RUNNER_TEMP/rtl-dot8-example"
+          cd "$RUNNER_TEMP/rtl-dot8-example"
+          python evaluate.py --program_path initial.sv --results_dir result
+          python -c 'import json; m=json.load(open("result/metrics.json")); c=json.load(open("result/correct.json")); assert c["correct"] and m["combined_score"]==1.0'
+          python -c 'from evaluator import evaluate; x=evaluate("initial.sv"); assert x["combined_score"]==1.0 and x["generic_cells"]==4069; print(x)'
