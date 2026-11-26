@@ -10,13 +10,15 @@
 
 **Target:** beat 4,069 cells with an exact, stateless signed eight-lane dot product under the fixed synthesis flow. No external ranked record has been accepted yet. The reference is a seed, not an external participant or a newly proven optimization.
 
+**Headroom:** an unpublished organizer probe measured 3,106 generic cells (−23.7%) and passes the current judge's algebraic proof. It is not a ranked entry and its design stays private while the challenge is open; it shows that roughly a quarter of the reference cells are removable.
+
 ## Other experiments (not ranked)
 
 | Design | Generic cells | Correctness evidence | Outcome |
 | --- | ---: | --- | --- |
 | Range-bounded balanced adder tree | 4366 | 75,540 deterministic vectors passed; RTL SAT proved | 297 more cells; retain as a negative result |
 
-[Recorded synthesis evidence](research/evidence/generic-synthesis-20261125.json) · [Native and portable SAT evidence](research/evidence/fast-judge-20261126.json).
+[Recorded synthesis evidence](research/evidence/generic-synthesis-20261125.json) · [Native and portable proof evidence](research/evidence/fast-judge-20261126.json).
 
 ## Submit
 

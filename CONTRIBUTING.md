@@ -30,7 +30,7 @@ Use an ASCII <=64 KiB single module dot8 with fixed interface and stateless comb
 
 ### 3. Read the check
 
-The fast judge is designed to trigger on PRs changing submissions. GitHub may require maintainer approval for new contributors and queue delays are possible. The isolated runner gives a provisional score only after the fixed reference, structural checks, and exact RTL SAT proof pass. Timeout or counterexample means no proved score. New official ranks require a trusted main-branch recheck and maintainer review. No automatic merge. A workflow edited by a PR is never treated as trusted.
+The fast judge is designed to trigger on PRs changing submissions. GitHub may require maintainer approval for new contributors and queue delays are possible. The isolated runner gives a provisional score only after the fixed reference, structural checks, and an exact equivalence proof (algebraic rewriting of the mapped netlist, or RTL SAT as fallback) pass. Timeout or counterexample means no proved score. New official ranks require a trusted main-branch recheck and maintainer review. No automatic merge. A workflow edited by a PR is never treated as trusted.
 
 Maintainers: use the main-branch Fast RTL judge workflow_dispatch with exact PR number and reviewed 40-character head SHA; verify the run is on trusted main and candidate hash matches. The workflow fetches the blob, not fork scripts, uses a GitHub-hosted runner, read-only permissions, no saved credentials, a networkless read-only restricted container, 2 GiB memory and bounded execution. Container isolation reduces but does not eliminate parser/host vulnerabilities. Do not use private/self-hosted runners for submissions.
 

@@ -1,6 +1,6 @@
 # SiliconArena exact INT8 dot-product evolution benchmark
 
-A CPU-only, exact combinational Verilog optimization example. The same Yosys 0.33 flow establishes a 4,069-cell reference. Every candidate needs a successful SAT miter proof before receiving a nonzero score. Fitness = 4069 / candidate generic cells (larger is better). This is not a physical PPA metric.
+A CPU-only, exact combinational Verilog optimization example. The same Yosys 0.33 flow establishes a 4,069-cell reference. Every candidate needs a successful exact equivalence proof (algebraic rewriting of the mapped netlist, or a SAT miter fallback) before receiving a nonzero score. Fitness = 4069 / candidate generic cells (larger is better). This is not a physical PPA metric.
 
 ## Run the evaluator without any LLM
 
