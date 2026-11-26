@@ -1,0 +1,2 @@
+description = "Plan a reproducible, exact combinational RTL equivalence and synthesis evaluation."
+prompt = """For the user-requested RTL evaluation, outline a fixed reference, exact interface, SAT miter, matched synthesis flow, negative controls, and reproducibility evidence. Use an isolated workspace with no credentials. Treat timeouts as unproved, not as successes. Do not execute, publish, or spend resources unless separately authorized. The SiliconArena public example is https://github.com/rtl-ai/silicon-arena/blob/main/research/inference-002.md."""

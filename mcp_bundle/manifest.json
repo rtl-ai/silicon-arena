@@ -1,0 +1,50 @@
+{
+  "manifest_version": "0.3",
+  "name": "siliconarena-catalog",
+  "display_name": "SiliconArena RTL Research Catalog",
+  "version": "0.1.0",
+  "description": "Read-only catalog of reproducible RTL optimization challenges, reference scores, and formal verification evidence.",
+  "author": {
+    "name": "RTLAI",
+    "url": "https://github.com/rtl-ai"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rtl-ai/silicon-arena.git"
+  },
+  "homepage": "https://rtl-ai.github.io/silicon-arena/",
+  "documentation": "https://github.com/rtl-ai/silicon-arena/tree/main/mcp_bundle",
+  "support": "https://github.com/rtl-ai/silicon-arena/issues",
+  "license": "MIT",
+  "keywords": [
+    "rtl",
+    "systemverilog",
+    "asic",
+    "formal-verification",
+    "benchmark"
+  ],
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.cjs",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server/index.cjs"
+      ]
+    }
+  },
+  "tools": [
+    {
+      "name": "list_challenges",
+      "description": "List public accelerator research tasks by track."
+    },
+    {
+      "name": "get_challenge",
+      "description": "Read one public challenge contract by ID."
+    },
+    {
+      "name": "get_research_status",
+      "description": "Read dated research evidence and limitations."
+    }
+  ]
+}
