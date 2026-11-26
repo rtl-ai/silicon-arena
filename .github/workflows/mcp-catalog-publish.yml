@@ -1,0 +1,145 @@
+name: Build public MCP catalog bundle
+on:
+  push:
+    branches: [main, feat/mcpb-gemini-discovery-20261126]
+    paths:
+      - 'mcp_bundle/**'
+      - 'gemini-extension.json'
+      - 'commands/siliconarena/**'
+      - '.github/workflows/mcp-catalog-publish.yml'
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: catalog-bundle-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Test and package the public read-only catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/catalog-bundle"
+          cp -r mcp_bundle/. "$RUNNER_TEMP/catalog-bundle/"
+          cp docs/challenges.json "$RUNNER_TEMP/catalog-bundle/server/challenges.json"
+          cp LICENSE "$RUNNER_TEMP/catalog-bundle/LICENSE"
+          python3 -c 'import json,tomllib; from pathlib import Path; m=json.load(open("gemini-extension.json")); assert m["name"]=="siliconarena"; assert "hooks" not in m and "mcpServers" not in m; [tomllib.loads(p.read_text()) for p in Path("commands/siliconarena").glob("*.toml")]; print("GEMINI_MANIFEST_AND_COMMANDS=PASS")'
+          cd "$RUNNER_TEMP/catalog-bundle"
+          npm install --ignore-scripts --omit=dev --no-audit --no-fund
+          npm audit --omit=dev --audit-level=high
+          node test.cjs
+          mkdir -p "$RUNNER_TEMP/catalog-artifacts"
+          python3 - <<'PY'
+          import hashlib, json, os, zipfile
+          from pathlib import Path
+          root=Path.cwd()
+          out=Path(os.environ["RUNNER_TEMP"])/"catalog-artifacts"
+          manifest=json.loads((root/"manifest.json").read_text())
+          assert manifest["manifest_version"]=="0.3"
+          assert manifest["server"]["entry_point"]=="server/index.cjs"
+          assert len(manifest["tools"])==3
+          archive=out/"siliconarena-catalog-v0.1.0.mcpb"
+          with zipfile.ZipFile(archive,"w",zipfile.ZIP_DEFLATED) as z:
+              for n in ("manifest.json","package.json","package-lock.json","LICENSE","README.md"):
+                  z.write(root/n,n)
+              for d in ("server","node_modules"):
+                  for p in sorted((root/d).rglob("*")):
+                      if p.is_file() and not p.is_symlink() and ".bin" not in p.parts:
+                          z.write(p,p.relative_to(root).as_posix())
+          with zipfile.ZipFile(archive) as z:
+              assert z.testzip() is None
+              assert {"manifest.json","server/index.cjs","server/challenges.json","package-lock.json"}.issubset(z.namelist())
+              assert all(not n.startswith("/") and ".." not in Path(n).parts for n in z.namelist())
+          digest=hashlib.sha256(archive.read_bytes()).hexdigest()
+          server={
+              "$schema":"https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+              "name":"io.github.rtl-ai/siliconarena-catalog",
+              "title":"SiliconArena RTL Research Catalog",
+              "description":"Read-only RTL optimization challenges, reference scores, and formal verification evidence.",
+              "version":"0.1.0",
+              "repository":{"url":"https://github.com/rtl-ai/silicon-arena","source":"github"},
+              "packages":[{"registryType":"mcpb","identifier":"https://github.com/rtl-ai/silicon-arena/releases/download/mcp-catalog-v0.1.0/"+archive.name,"fileSha256":digest,"transport":{"type":"stdio"}}]
+          }
+          (out/"server.json").write_text(json.dumps(server,indent=2)+"\n")
+          (out/"SHA256SUMS.txt").write_text(digest+"  "+archive.name+"\n")
+          print("MCPB_PACKAGE=PASS",archive.stat().st_size,digest)
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tested-public-catalog-bundle
+          path: ${{ runner.temp }}/catalog-artifacts/
+          if-no-files-found: error
+          retention-days: 7
+  release:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: tested-public-catalog-bundle
+          path: ${{ runner.temp }}/catalog-artifacts
+      - name: Publish tested bundle as a versioned GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: rtl-ai/silicon-arena
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/catalog-artifacts"
+          sha256sum -c SHA256SUMS.txt
+          gh release create mcp-catalog-v0.1.0 siliconarena-catalog-v0.1.0.mcpb SHA256SUMS.txt server.json \
+            --repo "$GH_REPO" --target "$GITHUB_SHA" --latest=false \
+            --title "SiliconArena read-only MCP catalog v0.1.0" \
+            --notes "Install only after review. Three read-only tools expose a dated public RTL research catalog, benchmark rules and evidence links. No credentials, network, shell execution, arbitrary files, tracking or automatic participation. Official Registry listing is separately verified. No physical PPBA or external participant claim."
+  registry:
+    if: github.ref == 'refs/heads/main'
+    needs: release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: tested-public-catalog-bundle
+          path: ${{ runner.temp }}/catalog-artifacts
+      - name: Verify released bytes and register with the official MCP Registry
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/catalog-artifacts"
+          sha256sum -c SHA256SUMS.txt
+          curl --fail --silent --show-error --location --max-time 60 https://github.com/rtl-ai/silicon-arena/releases/download/mcp-catalog-v0.1.0/siliconarena-catalog-v0.1.0.mcpb -o released.mcpb
+          cmp released.mcpb siliconarena-catalog-v0.1.0.mcpb
+          curl --fail --silent --show-error --location --max-time 60 https://github.com/modelcontextprotocol/registry/releases/download/v1.8.16/mcp-publisher_linux_amd64.tar.gz -o publisher.tar.gz
+          echo "6e2f799550cf843c6fd3350498d56cc49be3dc0af1e6237eb0e6435c7a9d5c05  publisher.tar.gz" | sha256sum -c -
+          tar -xzf publisher.tar.gz --no-same-owner --no-same-permissions
+          ./mcp-publisher validate server.json
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish server.json
+          python3 - <<'PY'
+          import json,time,urllib.request
+          expected=json.load(open("server.json"))
+          url="https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.rtl-ai%2Fsiliconarena-catalog"
+          for i in range(6):
+              try:
+                  with urllib.request.urlopen(url,timeout=15) as r:
+                      data=json.load(r)
+                  for row in data.get("servers",[]):
+                      s=row.get("server",row)
+                      if s.get("name")==expected["name"] and s.get("version")==expected["version"] and any(p.get("fileSha256")==expected["packages"][0]["fileSha256"] for p in s.get("packages",[])):
+                          print("OFFICIAL_MCP_REGISTRY_LISTING=VERIFIED",s["name"],s["version"])
+                          raise SystemExit(0)
+              except (OSError,ValueError) as e: print("registry lookup",type(e).__name__)
+              time.sleep(5)
+          raise SystemExit("Publication response received but public listing not yet verified.")
+          PY
