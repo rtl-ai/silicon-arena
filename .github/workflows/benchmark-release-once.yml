@@ -1,0 +1,102 @@
+name: Publish portable RTL benchmark and audit public discovery
+on:
+  push:
+    branches: [ops/benchmark-release-20261126]
+    paths: ['.github/workflows/benchmark-release-once.yml']
+permissions: {}
+concurrency:
+  group: benchmark-release-v0-1-0
+  cancel-in-progress: false
+jobs:
+  public-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - name: Verify public sitemap and external catalog (no authentication)
+        run: |
+          python3 - <<'PY'
+          import json, urllib.request, urllib.error
+          from xml.etree import ElementTree as ET
+          base="https://rtl-ai.github.io/silicon-arena/"
+          def fetch(url):
+              req=urllib.request.Request(url,headers={"User-Agent":"SiliconArena-Public-Audit/1.0"})
+              with urllib.request.urlopen(req,timeout=20) as r:
+                  assert r.status==200
+                  raw=r.read(2*1024*1024+1)
+                  if len(raw)>2*1024*1024: raise ValueError("oversized")
+                  return raw
+          try:
+              raw=fetch(base+"sitemap.xml")
+              root=ET.fromstring(raw)
+              urls=[el.text for el in root.findall("{*}url/{*}loc")]
+              assert base in urls and all(u and u.startswith(base) for u in urls)
+              print("PUBLIC_SITEMAP_OK",json.dumps(urls))
+              page=fetch(base).decode("utf-8")
+              assert "SiliconArena" in page
+              print("PUBLIC_HOME_OK", "google-site-verification" in page)
+              print("PUBLIC_VERIFICATION_FILE_OK",fetch(base+"google1d354279a3691287.html").decode().strip().startswith("google-site-verification:"))
+          except Exception as e:
+              print("PUBLIC_SITE_ERROR",type(e).__name__)
+              raise
+          try:
+              ident="rtl-ai-silicon-arena-d20cfa656a05f7ad"
+              data=json.loads(fetch("https://openchallengelist.com/api/competitions/"+ident+".json"))
+              d=data.get("competition",data)
+              print("OCL_SNAPSHOT",json.dumps({"name":d.get("name"),"status":d.get("status"),"updated":d.get("lastUpdated"),"stats":d.get("stats")},ensure_ascii=True)[:1800])
+          except Exception as e:
+              print("OCL_UNCONFIRMED",type(e).__name__)
+          PY
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: d94236ec6c3416ea3dae980ace2b356197b3867f
+          persist-credentials: false
+      - name: Package reviewed standalone example
+        run: |
+          set -euo pipefail
+          python3 tools/export_evolution_example.py "$RUNNER_TEMP/siliconarena-rtl-dot8"
+          cd "$RUNNER_TEMP"
+          python3 - <<'PY'
+          import hashlib,zipfile
+          from pathlib import Path
+          root=Path("siliconarena-rtl-dot8")
+          expected={"initial.sv","evaluator.py","evaluate.py","README.md","tools/fast_judge.py","inference/dot8.sv","requirements.txt","LICENSE"}
+          files={str(p.relative_to(root)) for p in root.rglob("*") if p.is_file()}
+          assert files==expected,files
+          out=Path("siliconarena-rtl-dot8-v0.1.0.zip")
+          with zipfile.ZipFile(out,"w",zipfile.ZIP_DEFLATED) as z:
+              for name in sorted(expected):z.write(root/name,root.name+"/"+name)
+          Path("SHA256SUMS.txt").write_text(hashlib.sha256(out.read_bytes()).hexdigest()+"  "+out.name+"\n")
+          print("PACKAGE_OK",len(expected),"files")
+          PY
+          cat > release-notes.md <<'EOF'
+          First portable SiliconArena INT8 benchmark release. A small, CPU-only SystemVerilog task, not a fabricated chip or physical PPBA leaderboard.
+
+          - Exact signed eight-lane INT8 dot product; reference: 4,069 Yosys 0.33 generic cells.
+          - Pinned Python/YoWASP dependency. No model API key or GPU required for evaluator-only checks.
+          - Full defined-input RTL SAT equivalence gates provisional scores; proof timeouts are unscored.
+          - ShinkaEvolve and OpenEvolve evaluator-interface adapters, tested independently. Upstream acceptance and full LLM runs are not claimed.
+          - Known balanced-tree candidate: 4,366 cells, formally equivalent, worse by cell count.
+          - Download the ZIP and verify SHA256SUMS.txt. Inspect and run in a disposable workspace; do not execute untrusted HDL on a personal machine.
+
+          [Participant instructions](https://github.com/rtl-ai/silicon-arena/blob/main/CONTRIBUTING.md) · [Proof evidence](https://github.com/rtl-ai/silicon-arena/actions/runs/45727682521) · [PR judge smoke test](https://github.com/rtl-ai/silicon-arena/actions/runs/45728019672)
+
+          Official ranks require independent trusted recheck and review. All participation is voluntary and subject to authorized resource budgets.
+          EOF
+      - name: Publish one versioned benchmark release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: rtl-ai/silicon-arena
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          if gh release view benchmark-v0.1.0 --repo "$GH_REPO" >/dev/null 2>&1; then
+            echo "Release already exists; no replacement."
+            exit 1
+          fi
+          gh release create benchmark-v0.1.0 siliconarena-rtl-dot8-v0.1.0.zip SHA256SUMS.txt --repo "$GH_REPO" --target d94236ec6c3416ea3dae980ace2b356197b3867f --title "SiliconArena: portable SAT-verified INT8 benchmark v0.1.0" --notes-file release-notes.md --latest
