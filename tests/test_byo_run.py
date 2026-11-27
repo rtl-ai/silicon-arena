@@ -117,6 +117,41 @@ class OaiChat(unittest.TestCase):
         self.assertEqual(seen["body"]["messages"][0]["content"], "PROMPT")
         self.assertEqual(seen["auth"], "Bearer secret")
 
+    def test_retries_rate_limit_then_succeeds(self):
+        import io
+        import json
+        import urllib.error
+        import oai_chat
+        calls, slept = [], []
+
+        def fake_urlopen(req, timeout):
+            calls.append(1)
+            if len(calls) < 3:
+                raise urllib.error.HTTPError(req.full_url, 429, "Too Many Requests", {"Retry-After": "7"}, None)
+            return io.BytesIO(json.dumps({"choices": [{"message": {"content": "OK"}}]}).encode())
+
+        req = oai_chat.urllib.request.Request("http://x/v1/chat/completions", data=b"{}")
+        with mock.patch.object(oai_chat.urllib.request, "urlopen", fake_urlopen), mock.patch("sys.stderr"):
+            reply = oai_chat.post(req, 5, 4, slept.append)
+        self.assertEqual(reply["choices"][0]["message"]["content"], "OK")
+        self.assertEqual(slept, [7, 7])
+
+    def test_gives_up_and_does_not_retry_auth_errors(self):
+        import urllib.error
+        import oai_chat
+        for code, expected_calls in ((401, 1), (429, 3)):
+            calls = []
+
+            def fake_urlopen(req, timeout):
+                calls.append(1)
+                raise urllib.error.HTTPError(req.full_url, code, "x", {}, None)
+
+            req = oai_chat.urllib.request.Request("http://x/v1/chat/completions", data=b"{}")
+            with self.subTest(code=code), mock.patch.object(oai_chat.urllib.request, "urlopen", fake_urlopen), \
+                    mock.patch("sys.stderr"), self.assertRaises(urllib.error.HTTPError):
+                oai_chat.post(req, 5, 2, lambda s: None)
+            self.assertEqual(len(calls), expected_calls)
+
 
 @unittest.skipUnless(shutil.which("yowasp-yosys"), "pinned yowasp-yosys from judge/requirements.txt is required")
 class RealJudge(unittest.TestCase):
