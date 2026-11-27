@@ -1,15 +1,26 @@
 name: Free-model seed run
-# Runs tools/byo_run.py against one OpenRouter free-tier model on a fixed prompt.
-# Needs repository secret OPENROUTER_API_KEY (free account). Scheduled runs rotate
-# through MODELS by day; manual runs may pick a model:
-#   gh workflow run model-seed.yml -f model=google/gemma-4-31b-it:free
+# Runs tools/byo_run.py on a fixed prompt against free-tier models from two providers:
+#   openrouter: OpenRouter ":free" models      (secret OPENROUTER_API_KEY)
+#   cloudflare: Cloudflare Workers AI models   (secrets CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN;
+#               the Cloudflare leg is skipped with a warning while they are unset)
+# Scheduled runs rotate through each provider's list by day. Manual runs:
+#   gh workflow run model-seed.yml                                   # both providers, today's rotation
+#   gh workflow run model-seed.yml -f provider=openrouter -f model=google/gemma-4-31b-it:free
+#   gh workflow run model-seed.yml -f provider=cloudflare -f model=@cf/openai/gpt-oss-120b
 on:
   schedule:
-    - cron: "23 17 * * *"
+    # 07:23 UTC = late evening in US time zones, when shared free pools are expected to be quieter
+    # (unverified; OpenRouter documents no off-peak hours) and right after the 00:00 UTC daily reset.
+    - cron: "23 7 * * *"
   workflow_dispatch:
     inputs:
+      provider:
+        description: "which provider(s) to run"
+        type: choice
+        options: [both, openrouter, cloudflare]
+        default: both
       model:
-        description: "OpenRouter model id ending in :free (blank = today's rotation)"
+        description: "model id from that provider's list below (blank = today's rotation; ignored for both)"
         required: false
       attempts:
         description: "judged attempts (1-10)"
@@ -21,67 +32,97 @@ concurrency:
   group: model-seed
   cancel-in-progress: false
 env:
-  MODELS: >-
+  OPENROUTER_MODELS: >-
     nvidia/nemotron-3-ultra-550b-a55b:free
     google/gemma-4-31b-it:free
     nvidia/nemotron-3.5-super-vl:free
     baidu/ernie-5.5-flash-preview:free
     google/gemma-4-26b-a4b-it:free
     nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free
+  # Only models inside the Workers AI free daily allocation (10,000 neurons, resets 00:00 UTC).
+  CLOUDFLARE_MODELS: >-
+    @cf/openai/gpt-oss-120b
+    @cf/zai-org/glm-4.7-flash
+    @cf/qwen/qwen3.8-27b
+    @cf/google/gemma-4-26b-a4b-it
 jobs:
   run:
-    # Holds the API key; read-only token; never pushes.
+    # Holds the API keys; read-only token; never pushes.
+    strategy:
+      fail-fast: false
+      matrix:
+        provider: [openrouter, cloudflare]
     runs-on: ubuntu-24.04
     timeout-minutes: 75
-    outputs:
-      handle: ${{ steps.pick.outputs.handle }}
-      proved: ${{ steps.harness.outputs.proved }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: python -m pip install -r judge/requirements.txt
       - id: pick
         env:
+          PROVIDER: ${{ matrix.provider }}
+          INPUT_PROVIDER: ${{ inputs.provider || 'both' }}
           INPUT_MODEL: ${{ inputs.model }}
           INPUT_ATTEMPTS: ${{ inputs.attempts }}
         run: |
           set -euo pipefail
-          read -ra list <<< "$MODELS"
+          if [ "$INPUT_PROVIDER" != both ] && [ "$INPUT_PROVIDER" != "$PROVIDER" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          [ "$INPUT_PROVIDER" = both ] && INPUT_MODEL=""
+          if [ "$PROVIDER" = openrouter ]; then names="$OPENROUTER_MODELS"; else names="$CLOUDFLARE_MODELS"; fi
+          read -ra list <<< "$names"
           model="${INPUT_MODEL:-${list[$(( 10#$(date -u +%j) % ${#list[@]} ))]}}"
-          [[ "$model" =~ ^[A-Za-z0-9._/-]+:free$ ]] || { echo "only :free models allowed: $model"; exit 1; }
+          printf '%s\n' "${list[@]}" | grep -qxF -- "$model" || { echo "model not in the $PROVIDER list: $model"; exit 1; }
           attempts="${INPUT_ATTEMPTS:-3}"
           [[ "$attempts" =~ ^([1-9]|10)$ ]] || { echo "attempts must be 1-10"; exit 1; }
-          slug=$(echo "${model%:free}" | tr '/.:' '---' | cut -c1-50)
+          if [ "$PROVIDER" = openrouter ]; then slug="${model%:free}"; else slug="cf-${model#@cf/}"; fi
+          slug=$(echo "$slug" | tr '/.:@' '----' | cut -c1-50)
+          echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "model=$model" >> "$GITHUB_OUTPUT"
           echo "attempts=$attempts" >> "$GITHUB_OUTPUT"
           echo "handle=rtl-ai-seed-$slug-$(date -u +%Y%m%d)-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+      - if: steps.pick.outputs.skip == 'false'
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - if: steps.pick.outputs.skip == 'false'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - if: steps.pick.outputs.skip == 'false'
+        run: python -m pip install -r judge/requirements.txt
       - id: harness
+        if: steps.pick.outputs.skip == 'false'
         env:
+          PROVIDER: ${{ matrix.provider }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           MODEL: ${{ steps.pick.outputs.model }}
           ATTEMPTS: ${{ steps.pick.outputs.attempts }}
           HANDLE: ${{ steps.pick.outputs.handle }}
         run: |
           set -uo pipefail
-          [ -n "$OPENROUTER_API_KEY" ] || { echo "::error::repository secret OPENROUTER_API_KEY is not set"; exit 1; }
+          if [ "$PROVIDER" = openrouter ]; then
+            [ -n "$OPENROUTER_API_KEY" ] || { echo "::error::repository secret OPENROUTER_API_KEY is not set"; exit 1; }
+            base=https://openrouter.ai/api/v1; key=OPENROUTER_API_KEY; via="OpenRouter free tier"
+          else
+            if [ -z "$CLOUDFLARE_ACCOUNT_ID" ] || [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+              echo "::warning::CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN not set; skipping the Cloudflare leg"; exit 0
+            fi
+            base="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/ai/v1"
+            key=CLOUDFLARE_API_TOKEN; via="Cloudflare Workers AI free allocation"
+          fi
           python tools/byo_run.py --handle "$HANDLE" --author rtl-ai --attempts "$ATTEMPTS" --model-timeout 1200 \
-            --label "$MODEL via OpenRouter free tier (scheduled organizer seed run)" -- \
-            python tools/oai_chat.py --base-url https://openrouter.ai/api/v1 --model "$MODEL" \
-            --key-env OPENROUTER_API_KEY --timeout 900
+            --label "$MODEL via $via (scheduled organizer seed run)" -- \
+            python tools/oai_chat.py --base-url "$base" --model "$MODEL" --key-env "$key" --timeout 900
           rc=$?
-          echo "proved=$([ $rc -eq 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           {
-            echo "## $MODEL"
+            echo "## $MODEL ($PROVIDER)"
             echo '```json'; cat ".arena/byo/$HANDLE/log.json"; echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           if grep -q model_error ".arena/byo/$HANDLE/log.json"; then echo "::error::model call failed (rate limit, outage or bad key)"; exit 1; fi
           [ $rc -le 1 ] || exit $rc
-      - uses: actions/upload-artifact@v4
-        if: always()
+      - if: always() && steps.pick.outputs.skip == 'false'
+        uses: actions/upload-artifact@v4
         with:
           name: seed-${{ steps.pick.outputs.handle }}
           path: |
@@ -90,9 +131,9 @@ jobs:
           include-hidden-files: true
           if-no-files-found: ignore
   publish:
-    # Pushes a proved result to its own branch for owner review; never sees the API key.
+    # Pushes each proved result to its own branch for owner review; never sees the API keys.
     needs: run
-    if: needs.run.outputs.proved == 'true'
+    if: always() && !cancelled()
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -101,20 +142,23 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: seed-${{ needs.run.outputs.handle }}
+          pattern: seed-rtl-ai-seed-*
+          merge-multiple: true
           path: /tmp/seed
-      - env:
-          HANDLE: ${{ needs.run.outputs.handle }}
-        run: |
+      - run: |
           set -euo pipefail
-          [[ "$HANDLE" =~ ^rtl-ai-seed-[A-Za-z0-9_-]+$ ]]
-          src="/tmp/seed/submissions/$HANDLE"
-          [ "$(find "$src" -mindepth 1 | wc -l)" -eq 2 ] && [ -f "$src/dot8.sv" ] && [ -f "$src/SUBMISSION.md" ]
-          mkdir -p "submissions/$HANDLE" && cp "$src/dot8.sv" "$src/SUBMISSION.md" "submissions/$HANDLE/"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch -c "seed/$HANDLE"
-          git add "submissions/$HANDLE"
-          git commit -m "submission: $HANDLE (scheduled free-model seed run)"
-          git push origin "seed/$HANDLE"
-          echo "Open PR: https://github.com/$GITHUB_REPOSITORY/compare/main...seed/$HANDLE?expand=1" >> "$GITHUB_STEP_SUMMARY"
+          shopt -s nullglob
+          for src in /tmp/seed/submissions/*/; do
+            src="${src%/}"; handle="$(basename "$src")"
+            [[ "$handle" =~ ^rtl-ai-seed-[A-Za-z0-9_-]+$ ]]
+            [ "$(find "$src" -mindepth 1 | wc -l)" -eq 2 ] && [ -f "$src/dot8.sv" ] && [ -f "$src/SUBMISSION.md" ]
+            git switch -q --detach "$GITHUB_SHA"
+            mkdir -p "submissions/$handle" && cp "$src/dot8.sv" "$src/SUBMISSION.md" "submissions/$handle/"
+            git switch -c "seed/$handle"
+            git add "submissions/$handle"
+            git commit -m "submission: $handle (scheduled free-model seed run)"
+            git push origin "seed/$handle"
+            echo "Open PR: https://github.com/$GITHUB_REPOSITORY/compare/main...seed/$handle?expand=1" >> "$GITHUB_STEP_SUMMARY"
+          done
