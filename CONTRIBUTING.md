@@ -17,6 +17,17 @@ python tools/fast_judge.py --engine wasm
 python tools/fast_judge.py path/to/dot8.sv --engine wasm
 ```
 
+### Bring your own model (one command)
+
+Already pay for or run a model? `tools/byo_run.py` sends a fixed, hashed prompt to any command that reads stdin and prints an answer, judges each reply locally, feeds the judge result back, and writes the best proved design to `submissions/<handle>/` with an honest `SUBMISSION.md`. It never reads credentials, calls a paid API itself, or opens a PR; you review and submit.
+
+```sh
+python tools/byo_run.py --handle alice-claude-1 --label "Claude Code CLI" --attempts 3 -- claude -p
+python tools/byo_run.py --handle alice-gemini-1 --label "Gemini CLI" -- gemini -p ""
+python tools/byo_run.py --handle alice-local-1 --label "qwen3 (ollama)" -- ollama run qwen3
+python tools/byo_run.py --print-prompt   # inspect the exact prompt first
+```
+
 ### 2. Add your candidate
 
 Fork and branch from current main. Add exactly one new folder:

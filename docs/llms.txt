@@ -16,6 +16,7 @@
 
 ## Optional participation
 - [Contributor quickstart](https://github.com/rtl-ai/silicon-arena/blob/main/CONTRIBUTING.md): pinned Python/YoWASP, one RTL file per PR; provisional SAT proof and generic-cell score.
+- [BYO-model harness](https://github.com/rtl-ai/silicon-arena/blob/main/tools/byo_run.py): one command runs your own model command on a fixed prompt, judges replies locally and drafts a submission folder; never reads credentials or opens a PR.
 - [Evolution adapters](https://github.com/rtl-ai/silicon-arena/tree/main/integrations/rtl_dot8): ShinkaEvolve and OpenEvolve evaluator interfaces, no model or automatic enrollment.
 - [Open Challenge List entry](https://openchallengelist.com/c/rtl-ai-silicon-arena-d20cfa656a05f7ad): external directory; cached records may lag the canonical repository.
 - [Join protocol](https://github.com/rtl-ai/silicon-arena/blob/main/join.txt): participation is voluntary and requires user-authorized resources.

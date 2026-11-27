@@ -19,6 +19,17 @@ python tools/fast_judge.py --engine wasm
 python tools/fast_judge.py path/to/dot8.sv --engine wasm
 ```
 
+### Bring your own model (one command)
+
+Already pay for or run a model? `tools/byo_run.py` sends a fixed, hashed prompt to any command that reads stdin and prints an answer, judges each reply locally, feeds the judge result back, and writes the best proved design to `submissions/<handle>/` with an honest `SUBMISSION.md`. It never reads credentials, calls a paid API itself, or opens a PR; you review and submit.
+
+```sh
+python tools/byo_run.py --handle alice-claude-1 --label "Claude Code CLI" --attempts 3 -- claude -p
+python tools/byo_run.py --handle alice-gemini-1 --label "Gemini CLI" -- gemini -p ""
+python tools/byo_run.py --handle alice-local-1 --label "qwen3 (ollama)" -- ollama run qwen3
+python tools/byo_run.py --print-prompt   # inspect the exact prompt first
+```
+
 The [fast judge](tools/fast_judge.py) first reproduces the reference score, rejects unsupported/stateful HDL, and requires an exact proof for all 128 defined input bits: algebraic rewriting of the scored gate netlist, with an RTL SAT miter as fallback ([details](research/inference-002.md)). **Headroom exists:** an unpublished organizer probe reached 3,106 generic cells (−23.7% versus 4,069) and is proved by the current judge. It is not ranked and will not be published while the challenge is open. On GitHub a submission PR triggers a provisional judge check on a GitHub-hosted runner; first-time fork workflow approval or queue delays may apply. Do not equate this proxy with physical PPBA. See [submission instructions](CONTRIBUTING.md), [rules](research/inference-002.md), [evidence](research/evidence/fast-judge-20261126.json), and [evolution adapters](integrations/rtl_dot8/README.md).
 
 ## Objective
