@@ -87,9 +87,14 @@ class Loop(unittest.TestCase):
 
 class Cli(unittest.TestCase):
     def test_bad_handle_and_missing_cmd(self):
-        for argv in (["--handle", "../x", "--label", "l", "--", "m"], ["--handle", "ok", "--label", "l"]):
+        for argv in (["--handle", "../x", "--label", "l", "--", "m"], ["--handle", "ok", "--label", "l"], ["--label", "l", "--", "m"]):
             with self.subTest(argv=argv), self.assertRaises(SystemExit), mock.patch("sys.stderr"):
                 byo_run.main(argv)
+
+    def test_print_prompt_needs_no_handle(self):
+        with mock.patch("builtins.print") as out:
+            self.assertEqual(byo_run.main(["--print-prompt"]), 0)
+        self.assertIn("module dot8", out.call_args[0][0])
 
 
 @unittest.skipUnless(shutil.which("yowasp-yosys"), "pinned yowasp-yosys from judge/requirements.txt is required")
