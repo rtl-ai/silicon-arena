@@ -192,8 +192,8 @@ def run(args, model=call_model):
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--handle", required=True, help="submission folder name, e.g. alice-claude-1")
-    p.add_argument("--label", required=True, help="honest model/tool label shown in SUBMISSION.md")
+    p.add_argument("--handle", help="submission folder name, e.g. alice-claude-1")
+    p.add_argument("--label", help="honest model/tool label shown in SUBMISSION.md")
     p.add_argument("--author", help="GitHub handle (defaults to --handle)")
     p.add_argument("--attempts", type=int, default=3, choices=range(1, MAX_ATTEMPTS + 1), metavar="1..%d" % MAX_ATTEMPTS)
     p.add_argument("--model-timeout", type=int, default=600, help="seconds per model call")
@@ -205,6 +205,8 @@ def main(argv=None):
     if args.print_prompt:
         print(base_prompt())
         return 0
+    if not args.handle or not args.label:
+        p.error("--handle and --label are required")
     if not HANDLE.fullmatch(args.handle):
         p.error("--handle must match %s" % HANDLE.pattern)
     if not args.model_cmd:

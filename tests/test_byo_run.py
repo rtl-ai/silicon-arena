@@ -87,9 +87,35 @@ class Loop(unittest.TestCase):
 
 class Cli(unittest.TestCase):
     def test_bad_handle_and_missing_cmd(self):
-        for argv in (["--handle", "../x", "--label", "l", "--", "m"], ["--handle", "ok", "--label", "l"]):
+        for argv in (["--handle", "../x", "--label", "l", "--", "m"], ["--handle", "ok", "--label", "l"], ["--label", "l", "--", "m"]):
             with self.subTest(argv=argv), self.assertRaises(SystemExit), mock.patch("sys.stderr"):
                 byo_run.main(argv)
+
+    def test_print_prompt_needs_no_handle(self):
+        with mock.patch("builtins.print") as out:
+            self.assertEqual(byo_run.main(["--print-prompt"]), 0)
+        self.assertIn("module dot8", out.call_args[0][0])
+
+
+class OaiChat(unittest.TestCase):
+    def test_posts_prompt_and_prints_reply(self):
+        import io
+        import json
+        import oai_chat
+        seen = {}
+
+        def fake_urlopen(req, timeout):
+            seen["url"], seen["body"], seen["auth"] = req.full_url, json.loads(req.data), req.get_header("Authorization")
+            return io.BytesIO(json.dumps({"choices": [{"message": {"content": "ANSWER"}}]}).encode())
+
+        with mock.patch.object(oai_chat.urllib.request, "urlopen", fake_urlopen), \
+                mock.patch("sys.stdin", io.StringIO("PROMPT")), mock.patch("sys.stdout", new_callable=io.StringIO) as out, \
+                mock.patch.dict("os.environ", {"K": "secret"}):
+            oai_chat.main(["--base-url", "http://x/v1/", "--model", "m", "--key-env", "K"])
+        self.assertEqual(out.getvalue(), "ANSWER")
+        self.assertEqual(seen["url"], "http://x/v1/chat/completions")
+        self.assertEqual(seen["body"]["messages"][0]["content"], "PROMPT")
+        self.assertEqual(seen["auth"], "Bearer secret")
 
 
 @unittest.skipUnless(shutil.which("yowasp-yosys"), "pinned yowasp-yosys from judge/requirements.txt is required")

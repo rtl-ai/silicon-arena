@@ -1,0 +1,120 @@
+name: Free-model seed run
+# Runs tools/byo_run.py against one OpenRouter free-tier model on a fixed prompt.
+# Needs repository secret OPENROUTER_API_KEY (free account). Scheduled runs rotate
+# through MODELS by day; manual runs may pick a model:
+#   gh workflow run model-seed.yml -f model=google/gemma-4-31b-it:free
+on:
+  schedule:
+    - cron: "23 17 * * *"
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "OpenRouter model id ending in :free (blank = today's rotation)"
+        required: false
+      attempts:
+        description: "judged attempts (1-10)"
+        required: false
+        default: "3"
+permissions:
+  contents: read
+concurrency:
+  group: model-seed
+  cancel-in-progress: false
+env:
+  MODELS: >-
+    nvidia/nemotron-3-ultra-550b-a55b:free
+    google/gemma-4-31b-it:free
+    nvidia/nemotron-3.5-super-vl:free
+    baidu/ernie-5.5-flash-preview:free
+    google/gemma-4-26b-a4b-it:free
+    nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free
+jobs:
+  run:
+    # Holds the API key; read-only token; never pushes.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    outputs:
+      handle: ${{ steps.pick.outputs.handle }}
+      proved: ${{ steps.harness.outputs.proved }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r judge/requirements.txt
+      - id: pick
+        env:
+          INPUT_MODEL: ${{ inputs.model }}
+          INPUT_ATTEMPTS: ${{ inputs.attempts }}
+        run: |
+          set -euo pipefail
+          read -ra list <<< "$MODELS"
+          model="${INPUT_MODEL:-${list[$(( 10#$(date -u +%j) % ${#list[@]} ))]}}"
+          [[ "$model" =~ ^[A-Za-z0-9._/-]+:free$ ]] || { echo "only :free models allowed: $model"; exit 1; }
+          attempts="${INPUT_ATTEMPTS:-3}"
+          [[ "$attempts" =~ ^([1-9]|10)$ ]] || { echo "attempts must be 1-10"; exit 1; }
+          slug=$(echo "${model%:free}" | tr '/.:' '---' | cut -c1-50)
+          echo "model=$model" >> "$GITHUB_OUTPUT"
+          echo "attempts=$attempts" >> "$GITHUB_OUTPUT"
+          echo "handle=rtl-ai-seed-$slug-$(date -u +%Y%m%d)-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+      - id: harness
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          MODEL: ${{ steps.pick.outputs.model }}
+          ATTEMPTS: ${{ steps.pick.outputs.attempts }}
+          HANDLE: ${{ steps.pick.outputs.handle }}
+        run: |
+          set -uo pipefail
+          [ -n "$OPENROUTER_API_KEY" ] || { echo "::error::repository secret OPENROUTER_API_KEY is not set"; exit 1; }
+          python tools/byo_run.py --handle "$HANDLE" --author rtl-ai --attempts "$ATTEMPTS" \
+            --label "$MODEL via OpenRouter free tier (scheduled organizer seed run)" -- \
+            python tools/oai_chat.py --base-url https://openrouter.ai/api/v1 --model "$MODEL" \
+            --key-env OPENROUTER_API_KEY --timeout 900
+          rc=$?
+          echo "proved=$([ $rc -eq 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          {
+            echo "## $MODEL"
+            echo '```json'; cat ".arena/byo/$HANDLE/log.json"; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if grep -q model_error ".arena/byo/$HANDLE/log.json"; then echo "::error::model call failed (rate limit, outage or bad key)"; exit 1; fi
+          [ $rc -le 1 ] || exit $rc
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: seed-${{ steps.pick.outputs.handle }}
+          path: |
+            .arena/byo/
+            submissions/${{ steps.pick.outputs.handle }}/
+          include-hidden-files: true
+          if-no-files-found: ignore
+  publish:
+    # Pushes a proved result to its own branch for owner review; never sees the API key.
+    needs: run
+    if: needs.run.outputs.proved == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: seed-${{ needs.run.outputs.handle }}
+          path: /tmp/seed
+      - env:
+          HANDLE: ${{ needs.run.outputs.handle }}
+        run: |
+          set -euo pipefail
+          [[ "$HANDLE" =~ ^rtl-ai-seed-[A-Za-z0-9_-]+$ ]]
+          src="/tmp/seed/submissions/$HANDLE"
+          [ "$(find "$src" -mindepth 1 | wc -l)" -eq 2 ] && [ -f "$src/dot8.sv" ] && [ -f "$src/SUBMISSION.md" ]
+          mkdir -p "submissions/$HANDLE" && cp "$src/dot8.sv" "$src/SUBMISSION.md" "submissions/$HANDLE/"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "seed/$HANDLE"
+          git add "submissions/$HANDLE"
+          git commit -m "submission: $HANDLE (scheduled free-model seed run)"
+          git push origin "seed/$HANDLE"
+          echo "Open PR: https://github.com/$GITHUB_REPOSITORY/compare/main...seed/$HANDLE?expand=1" >> "$GITHUB_STEP_SUMMARY"
