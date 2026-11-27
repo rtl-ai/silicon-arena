@@ -26,6 +26,9 @@ python tools/byo_run.py --handle alice-claude-1 --label "Claude Code CLI" --atte
 python tools/byo_run.py --handle alice-gemini-1 --label "Gemini CLI" -- gemini -p ""
 python tools/byo_run.py --handle alice-local-1 --label "qwen3 (ollama)" -- ollama run qwen3
 python tools/byo_run.py --print-prompt   # inspect the exact prompt first
+# Any OpenAI-compatible endpoint (llama.cpp, vLLM, OpenRouter free models) via the stdin adapter:
+python tools/byo_run.py --handle alice-or-1 --label "<model>:free via OpenRouter" -- \
+  python tools/oai_chat.py --base-url https://openrouter.ai/api/v1 --model <model>:free --key-env OPENROUTER_API_KEY
 ```
 
 ### 2. Add your candidate
