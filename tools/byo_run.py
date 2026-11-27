@@ -1,0 +1,216 @@
+#!/usr/bin/env python3
+"""Bring-your-own-model harness for Inference-002 (dot8).
+
+Runs a fixed, versioned prompt against a model command you supply, judges every
+answer locally with tools/fast_judge.py, feeds the judge result back, and writes
+the best proved design to submissions/<handle>/ with an honest SUBMISSION.md.
+
+The model command receives the prompt on stdin and must print its answer on
+stdout. It runs without a shell, under your own account and budget; this script
+never reads credentials, never calls a paid API itself, and never opens a PR.
+
+Examples:
+  python tools/byo_run.py --handle me-claude-1 --label "Claude Code CLI" -- claude -p
+  python tools/byo_run.py --handle me-gemini-1 --label "Gemini CLI" -- gemini -p ""
+  python tools/byo_run.py --handle me-local-1 --label "qwen3 via ollama" -- ollama run qwen3
+"""
+import argparse
+import datetime
+import hashlib
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "tools"))
+import fast_judge  # noqa: E402
+
+HARNESS_VERSION = "byo-v1"
+HANDLE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,79}")
+MAX_ATTEMPTS = 10
+PROMPT = """You are entering SiliconArena Inference-002, an open RTL optimization challenge.
+
+Task: rewrite the SystemVerilog module below so that it keeps exactly the same
+combinational behavior for all 2^128 input combinations but synthesizes to FEWER
+Yosys 0.33 generic cells. The fixed scoring script is:
+  read_verilog -sv design.sv; synth -top dot8; check -assert; write_json mapped.json
+The reference scores {baseline} cells. Lower is better.
+
+Contract:
+- One module named dot8 with ports: input [63:0] a, input [63:0] b, output [31:0] result.
+- result = sum over lanes i=0..7 of signed(a[8i+7:8i]) * signed(b[8i+7:8i]), as a signed 32-bit value.
+- Pure combinational logic. One ASCII file <= 64 KiB. No `define/`include or other
+  directives, no attributes, strings, system tasks, initial/always_ff, delays,
+  escaped identifiers, assertions or black boxes.
+- The judge proves exact equivalence; any mismatch or unproved design scores nothing.
+
+Hints that are fair game: Booth or Baugh-Wooley partial products, sharing sign
+handling across lanes, compressor trees (3:2 / 4:2) built from explicit XOR/AND/OR,
+and avoiding Yosys inferring wide $mul/$add cells you could express more cheaply.
+
+Reference design:
+```systemverilog
+{reference}
+```
+
+Reply with exactly one ```systemverilog code block containing the complete module.
+"""
+
+
+def sha256(text):
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+def base_prompt():
+    reference = fast_judge.REF.read_text().strip()
+    return PROMPT.format(baseline=fast_judge.BASELINE, reference=reference)
+
+
+def extract_rtl(answer):
+    """Return the last fenced code block that defines dot8, else the bare module text."""
+    blocks = re.findall(r"```[A-Za-z]*[ \t]*\n(.*?)```", answer, re.S)
+    for block in reversed(blocks):
+        if re.search(r"\bmodule\s+dot8\b", block):
+            return block.strip() + "\n"
+    m = re.search(r"\bmodule\s+dot8\b.*?\bendmodule\b", answer, re.S)
+    return m.group(0) + "\n" if m else None
+
+
+def feedback(attempt, result, best):
+    if result["status"] == "proved":
+        line = "Attempt %d: PROVED equivalent, %d generic cells (reference %d)." % (
+            attempt, result["generic_cells"], fast_judge.BASELINE)
+    else:
+        line = "Attempt %d: REJECTED - %s." % (attempt, result["reason"])
+    if best:
+        line += " Best proved so far: %d cells." % best["generic_cells"]
+    return line + " Try again to reduce the cell count; reply with one complete ```systemverilog block."
+
+
+def judge(rtl, workdir, engine, proof_timeout):
+    path = workdir / "candidate.sv"
+    path.write_text(rtl)
+    try:
+        return fast_judge.evaluate(path, engine, proof_timeout)
+    except (fast_judge.Rejected, OSError, ValueError, KeyError, subprocess.SubprocessError) as e:
+        return {"status": "rejected", "reason": str(e) if isinstance(e, fast_judge.Rejected) else type(e).__name__}
+
+
+def call_model(cmd, prompt, timeout):
+    p = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=timeout)
+    if p.returncode != 0:
+        raise RuntimeError("model command exited %d: %s" % (p.returncode, p.stderr.strip()[-300:]))
+    return p.stdout
+
+
+def submission_md(args, best, log, prompt_hash):
+    today = datetime.date.today().isoformat()
+    rows = "\n".join("| %d | %s | %s |" % (r["attempt"], r["status"],
+                     r.get("generic_cells") or r.get("reason", "")) for r in log)
+    return """---
+spec: submission.md/v1
+problem: ../../PROBLEM.md
+title: {label} via BYO harness ({n} attempts)
+author: {author}
+date: {today}
+results:
+  - track: inference-002
+    value: {cells}
+    notes: "Local fast judge, {proof_kind}; provisional until trusted CI recheck."
+code: ./
+---
+
+# Approach
+
+Generated by `{label}` through `tools/byo_run.py` ({version}), fixed prompt
+sha256 `{prompt_hash}`, best of {n} attempt(s) with judge feedback between
+attempts. No human edits to the RTL.
+
+| attempt | status | cells / reason |
+|---|---|---|
+{rows}
+
+# Reproduction
+
+`python tools/fast_judge.py submissions/{handle}/dot8.sv --engine wasm`
+reported {cells} cells ({yosys}); candidate sha256 `{sha}`.
+
+# Limitations
+
+Model label is self-reported by the submitter. Model sampling is not
+deterministic, so re-running the harness may give a different result. The cell
+count is a Yosys generic-cell proxy, not physical area, timing or power.
+""".format(label=args.label, n=len(log), author=args.author or args.handle, today=today,
+           cells=best["generic_cells"], proof_kind="algebraic proof" if best["proof"].startswith("algebraic") else "SAT proof",
+           version=HARNESS_VERSION, prompt_hash=prompt_hash, rows=rows, handle=args.handle,
+           yosys=best["yosys_version"], sha=best["candidate_sha256"])
+
+
+def run(args, model=call_model):
+    out = ROOT / "submissions" / args.handle
+    if out.exists():
+        raise SystemExit("submissions/%s already exists; pick a new --handle" % args.handle)
+    workdir = ROOT / ".arena" / "byo" / args.handle
+    workdir.mkdir(parents=True, exist_ok=True)
+    prompt = base_prompt()
+    prompt_hash = sha256(prompt)
+    conversation, log, best, best_rtl = prompt, [], None, None
+    for attempt in range(1, args.attempts + 1):
+        try:
+            answer = model(args.model_cmd, conversation, args.model_timeout)
+        except (RuntimeError, OSError, subprocess.TimeoutExpired) as e:
+            print("attempt %d: model call failed: %s" % (attempt, e), file=sys.stderr)
+            log.append({"attempt": attempt, "status": "model_error", "reason": type(e).__name__})
+            break
+        (workdir / ("answer-%02d.txt" % attempt)).write_text(answer)
+        rtl = extract_rtl(answer)
+        result = judge(rtl, workdir, args.engine, args.proof_timeout) if rtl else {
+            "status": "rejected", "reason": "no module dot8 code block in answer"}
+        log.append({"attempt": attempt, "status": result["status"],
+                    **({"generic_cells": result["generic_cells"]} if result["status"] == "proved"
+                       else {"reason": result["reason"]})})
+        print(json.dumps(log[-1]))
+        if result["status"] == "proved" and (best is None or result["generic_cells"] < best["generic_cells"]):
+            best, best_rtl = result, rtl
+        conversation += "\n\n--- Your previous answer ---\n" + answer + "\n\n--- Judge ---\n" + feedback(attempt, result, best)
+    (workdir / "log.json").write_text(json.dumps({"harness": HARNESS_VERSION, "label": args.label,
+                                                  "prompt_sha256": prompt_hash, "attempts": log}, indent=2))
+    if not best:
+        print("No proved design; nothing written. Answers kept in %s" % workdir.relative_to(ROOT))
+        return 1
+    out.mkdir(parents=True)
+    (out / "dot8.sv").write_text(best_rtl)
+    (out / "SUBMISSION.md").write_text(submission_md(args, best, log, prompt_hash))
+    print("Best: %d cells (reference %d). Wrote submissions/%s/." % (best["generic_cells"], fast_judge.BASELINE, args.handle))
+    print("Review the files, then, only if you choose to submit:\n"
+          "  git switch -c submit/%s && git add submissions/%s && git commit -m 'submission: %s'\n"
+          "  gh pr create --fill" % (args.handle, args.handle, args.handle))
+    return 0
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("--handle", required=True, help="submission folder name, e.g. alice-claude-1")
+    p.add_argument("--label", required=True, help="honest model/tool label shown in SUBMISSION.md")
+    p.add_argument("--author", help="GitHub handle (defaults to --handle)")
+    p.add_argument("--attempts", type=int, default=3, choices=range(1, MAX_ATTEMPTS + 1), metavar="1..%d" % MAX_ATTEMPTS)
+    p.add_argument("--model-timeout", type=int, default=600, help="seconds per model call")
+    p.add_argument("--engine", choices=("auto", "native", "wasm"), default="wasm")
+    p.add_argument("--proof-timeout", type=int, default=120, choices=range(1, 121), metavar="1..120")
+    p.add_argument("--print-prompt", action="store_true", help="print the fixed prompt and exit")
+    p.add_argument("model_cmd", nargs="*", help="model command after --, reads stdin, prints answer")
+    args = p.parse_args(argv)
+    if args.print_prompt:
+        print(base_prompt())
+        return 0
+    if not HANDLE.fullmatch(args.handle):
+        p.error("--handle must match %s" % HANDLE.pattern)
+    if not args.model_cmd:
+        p.error("give the model command after --, e.g. -- claude -p")
+    return run(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
