@@ -68,7 +68,7 @@ jobs:
         run: |
           set -uo pipefail
           [ -n "$OPENROUTER_API_KEY" ] || { echo "::error::repository secret OPENROUTER_API_KEY is not set"; exit 1; }
-          python tools/byo_run.py --handle "$HANDLE" --author rtl-ai --attempts "$ATTEMPTS" \
+          python tools/byo_run.py --handle "$HANDLE" --author rtl-ai --attempts "$ATTEMPTS" --model-timeout 1200 \
             --label "$MODEL via OpenRouter free tier (scheduled organizer seed run)" -- \
             python tools/oai_chat.py --base-url https://openrouter.ai/api/v1 --model "$MODEL" \
             --key-env OPENROUTER_API_KEY --timeout 900

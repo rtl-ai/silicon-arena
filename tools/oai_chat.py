@@ -14,7 +14,26 @@ import argparse
 import json
 import os
 import sys
+import time
+import urllib.error
 import urllib.request
+
+RETRY_CODES = {429, 500, 502, 503, 504}
+
+
+def post(req, timeout, retries, sleep=time.sleep):
+    """POST with backoff on rate limits and transient server errors (free tiers return 429 often)."""
+    for i in range(retries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            if e.code not in RETRY_CODES or i == retries:
+                raise
+            wait = e.headers.get("Retry-After") if e.headers else None
+            delay = min(int(wait), 120) if wait and wait.isdigit() else 15 * 2 ** i
+            print("HTTP %d, retry %d/%d in %ds" % (e.code, i + 1, retries, delay), file=sys.stderr)
+            sleep(delay)
 
 
 def main(argv=None):
@@ -25,6 +44,7 @@ def main(argv=None):
     p.add_argument("--max-tokens", type=int, default=16384)
     p.add_argument("--temperature", type=float, default=0.6)
     p.add_argument("--timeout", type=int, default=900)
+    p.add_argument("--retries", type=int, default=4, help="retries on HTTP 429/5xx with backoff")
     a = p.parse_args(argv)
     headers = {"Content-Type": "application/json"}
     if a.key_env:
@@ -36,8 +56,7 @@ def main(argv=None):
             "max_tokens": a.max_tokens, "temperature": a.temperature}
     req = urllib.request.Request(a.base_url.rstrip("/") + "/chat/completions",
                                  data=json.dumps(body).encode(), headers=headers)
-    with urllib.request.urlopen(req, timeout=a.timeout) as r:
-        reply = json.load(r)
+    reply = post(req, a.timeout, a.retries)
     sys.stdout.write(reply["choices"][0]["message"]["content"] or "")
     return 0
 
